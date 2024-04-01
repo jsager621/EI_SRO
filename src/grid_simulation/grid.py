@@ -47,6 +47,19 @@ class SimGrid():
     def set_dummy_load_kw(self, load):
         grid.grid.load.at[len(self.grid.load)-1, "p_mw"] = load / 1e3
 
+    def run_powerflow(self):
+        pp.runpp(
+            self.grid,
+            numba=False,
+            calculate_voltage_angles=False,
+        )
+
+        self.store_grid_results()
+
+    def log_grid_results(self):
+        # TODO
+        pass
+
 
 
 
@@ -58,12 +71,7 @@ if __name__ == "__main__":
     # for idx_l in range(len(self.grid.load)):
     #     self.grid.load.at[idx_l, "p_mw"] = 0
 
-    pp.runpp(
-            grid.grid,
-            numba=False,
-            calculate_voltage_angles=False,
-        )
-    grid.store_grid_results()
+    grid.run_powerflow()
     print(grid.grid.res_bus)
     print(grid.grid.res_line)
     print(grid.grid.res_trafo)
