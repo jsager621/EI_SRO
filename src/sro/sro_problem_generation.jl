@@ -5,138 +5,61 @@ using Distributions
 using Copulas
 using Random
 
-export SROResource, SROTarget, SROProblem, SROProblemInstance, instantiate_problem
+export SROResource, SROTarget, SROProblem, instantiate_problem!, best_cost_from_selection
 
-# In this first version we only use a multivariate gaussian copula.
-
-# covariance matrix with full independence
-COV_12x12_INDEPENDENT = 
-[
-  1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-  0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-  0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-  0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-  0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-  0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0
-  0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0
-  0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0
-  0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0
-  0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0
-  0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0
-  0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0
-]
-
-# correlation matrix with two sets of 5 correlated variables
-# and two independent variables
-# variables 1-5 have covariance 0.4
-# variables 8-12 have covariance 0.7
-COV_12x12_5_2_5 = 
-[
-    1.0 0.4 0.4 0.4 0.4 0.0 0.0 0.0 0.0 0.0 0.0
-    0.4 1.0 0.4 0.4 0.4 0.0 0.0 0.0 0.0 0.0 0.0
-    0.4 0.4 1.0 0.4 0.4 0.0 0.0 0.0 0.0 0.0 0.0
-    0.4 0.4 0.4 1.0 0.4 0.0 0.0 0.0 0.0 0.0 0.0
-    0.4 0.4 0.4 0.4 1.0 0.0 0.0 0.0 0.0 0.0 0.0
-    0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0
-    0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0
-    0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.7 0.7 0.7
-    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.7 1.0 0.7 0.7
-    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.7 0.7 1.0 0.7
-    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.7 0.7 0.7 1.0
-]
-
-COV_TEST = [
-    1.0 0.4 0.4 0.4 0.4 0.0 0.0 0.0 0.0 0.0 0.0
-    0.4 1.0 0.4 0.4 0.4 0.0 0.0 0.0 0.0 0.0 0.0
-    0.4 0.4 1.0 0.4 0.4 0.0 0.0 0.0 0.0 0.0 0.0
-    0.4 0.4 0.4 1.0 0.4 0.0 0.0 0.0 0.0 0.0 0.0
-    0.4 0.4 0.4 0.4 1.0 0.0 0.0 0.0 0.0 0.0 0.0
-    0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0
-    0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0
-    0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.9 0.9 0.9
-    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.9 1.0 0.9 0.9
-    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.9 0.9 1.0 0.9
-    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.9 0.9 0.9 1.0
-]
-
-struct SROResource
-    values::ContinuousUnivariateDistribution
+mutable struct SROResource
+    possible_values::ContinuousUnivariateDistribution
     c_selection::Float64
     c_per_kw::Float64
+    rolled_value::Float64
 end
-
-# C = GaussianCopula([
-#     1.0 0.4 0.1
-#     0.4 1.0 0.8
-#     0.1 0.8 1.0
-# ])
 
 struct SROTarget
     p_target::Float64
     v_target::Float64
 end
 
-struct SROProblem
-    resoures::Vector{SROResource}
+"""
+Covariance matrix gives the pairwise covariances for each resources
+marginal distributions.
+Values are assigned by index in the resource vector, so resource at index
+i corresponds to entries in row/column i in the covariance matrix.
+"""
+mutable struct SROProblem
+    resources::Vector{SROResource}
     cov_matrix::Matrix{Float64}
     target::SROTarget
 end
 
-struct SROProblemInstance
-    resoures::Vector{SROResource}
-    cov_matrix::Matrix{Float64}
-    target::SROTarget
-    rolled_values::Vector{Float64}
-end
+"""
+Roll values for each resource in the problem set, accounting for their marginal
+distributions and covariance matrix.
+If rolled_value is already set for a resource, this function will override it.
+"""
+function instantiate_problem!(problem::SROProblem, rng::Xoshiro=Xoshiro())::Nothing
+    cov_matrix = problem.cov_matrix
+    resources = problem.resources
 
-function instantiate_problem(rng::Xoshiro, problem::SROProblem)::SROProblemInstance
-    rolled_values = Vector{Float64}()
-    # TODO
+    marginals = tuple([r.possible_values for r in resources]...)
+    c = GaussianCopula(cov_matrix)
+    d = SklarDist(c,marginals)
+    rolled_values = rand(rng, d,1)
 
-    return SROProblemInstance(
-        problem.resoures,
-        problem.cov_matrix,
-        problem.target,
-        rolled_values
-    )
-end
-
-
-function main()
-    rng = Xoshiro(1)
-
-    # X₁ = Normal(10, 5)
-    # X₂ = Normal(10, 5)
-    # X₃ = Normal(10, 5)
-
-    # C = GaussianCopula([
-    #     1.0 0.5 -0.5
-    #     0.5 1.0 -0.1
-    #     -0.5 -0.1 1.0
-    # ])
-
-    # D = SklarDist(C,(X₁,X₂,X₃))
-    # x = rand(rng, D,4)
-
-    # display(x)
-
-    cov_m = COV_12x12_5_2_5
-    C = GaussianCopula(cov_m)
-    dists = Vector{Normal}()
-    for i in 1:size(cov_m, 1)
-        push!(dists, Normal(10, 5))
+    for i in eachindex(rolled_values)
+        problem.resources[i].rolled_value = rolled_values[i]
     end
 
-    dists = Tuple(dists)
-
-    D = SklarDist(C,dists)
-    x = rand(rng, D,4)
-    display(x)
-
-    println("done")
+    return nothing
 end
 
-main()
+function best_cost_from_selection(target::SROTarget, selected_resources::Vector{SROResource})::Float64
+    v_target = target.v_target
+    # TODO
+
+    # sort resources by their c_per_kw from low to high
+
+    # select kw from them up to their generated amount in this order until target is met
+end
 
 end
 

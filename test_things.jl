@@ -1,20 +1,127 @@
-using Copulas, Distributions, Random
+using Copulas, Distributions, Random, FromFile
+@from "src/sro/sro_problem_generation.jl" using SROProblems
+@from "src/sro/solvers/solver.jl" using SROSolvers
 
 
-function main()
-    X₁ = Gamma(2,3)
-    X₂ = Pareto()
-    X₃ = LogNormal(0,1)
-    C = ClaytonCopula(3,0.7) # A 3-variate Clayton Copula with θ = 0.7
-    D = SklarDist(C,(X₁,X₂,X₃)) # The final distribution
+# covariance matrix with full independence
+COV_12x12_INDEPENDENT = 
+[
+  1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+  0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+  0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+  0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+  0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+  0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0
+  0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0
+  0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0
+  0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0
+  0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0
+  0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0
+  0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0
+]
 
-    # This generates a (3,1000)-sized dataset from the multivariate distribution D
-    simu = rand(D,1000)
+# correlation matrix with two sets of 5 correlated variables
+# and two independent variables
+# variables 1-5 have covariance 0.4
+# variables 8-12 have covariance 0.7
+COV_12x12_5_2_5 = 
+[
+    1.0 0.4 0.4 0.4 0.4 0.0 0.0 0.0 0.0 0.0 0.0
+    0.4 1.0 0.4 0.4 0.4 0.0 0.0 0.0 0.0 0.0 0.0
+    0.4 0.4 1.0 0.4 0.4 0.0 0.0 0.0 0.0 0.0 0.0
+    0.4 0.4 0.4 1.0 0.4 0.0 0.0 0.0 0.0 0.0 0.0
+    0.4 0.4 0.4 0.4 1.0 0.0 0.0 0.0 0.0 0.0 0.0
+    0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0
+    0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.7 0.7 0.7
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.7 1.0 0.7 0.7
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.7 0.7 1.0 0.7
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.7 0.7 0.7 1.0
+]
 
-    # While the following estimates the parameters of the model from a dataset: 
-    D̂ = fit(SklarDist{FrankCopula,Tuple{Gamma,Normal,LogNormal}}, simu)
+COV_TEST = [
+    1.0 0.4 0.4 0.4 0.4 0.0 0.0 0.0 0.0 0.0 0.0
+    0.4 1.0 0.4 0.4 0.4 0.0 0.0 0.0 0.0 0.0 0.0
+    0.4 0.4 1.0 0.4 0.4 0.0 0.0 0.0 0.0 0.0 0.0
+    0.4 0.4 0.4 1.0 0.4 0.0 0.0 0.0 0.0 0.0 0.0
+    0.4 0.4 0.4 0.4 1.0 0.0 0.0 0.0 0.0 0.0 0.0
+    0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0
+    0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.9 0.9 0.9
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.9 1.0 0.9 0.9
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.9 0.9 1.0 0.9
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.9 0.9 0.9 1.0
+]
+
+function hello_world()
+    rng = Xoshiro(1)
+    X₁ = Normal(10, 5)
+    X₂ = Normal(10, 5)
+    X₃ = Normal(10, 5)
+
+    C = GaussianCopula([
+        1.0 0.5 -0.5
+        0.5 1.0 -0.1
+        -0.5 -0.1 1.0
+    ])
+
+    D = SklarDist(C,(X₁,X₂,X₃))
+    x = rand(rng, D,1)
+
+    display(x)
+end
+
+function basic_function_test()
+    rng = Xoshiro(1)
+    
+    cov_m = COV_12x12_5_2_5
+    C = GaussianCopula(cov_m)
+    dists = Vector{Normal}()
+    for i in 1:size(cov_m, 1)
+        push!(dists, Normal(10, 5))
+    end
+
+    dists = Tuple(dists)
+
+    D = SklarDist(C,dists)
+    x = rand(rng, D,1)
+    display(x)
+
+    println("done")
+end
+
+function sro_problem_stuff()
+    cov_m = COV_12x12_5_2_5
+    resources = Vector{SROResource}()
+    for i in 1:size(cov_m, 1)
+        new_resource = SROResource(
+            Normal(10, 5),
+            float(i),
+            float(i),
+            0)
+        push!(resources, new_resource)
+    end
+
+    target = SROTarget(
+        0.5,
+        30
+    )
+
+    problem = SROProblem(
+        resources,
+        cov_m,
+        target
+    )
+
+    instantiate_problem!(problem)
+
+    rolled_values = [a.rolled_value for a in problem.resources]
+    println(rolled_values)
 end
 
 
+function main()
+    sro_problem_stuff()
+end
 
 main()
