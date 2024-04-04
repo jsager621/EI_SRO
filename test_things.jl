@@ -91,6 +91,7 @@ function basic_function_test()
 end
 
 function sro_problem_stuff()
+    rng = Xoshiro(1)
     cov_m = COV_12x12_5_2_5
     resources = Vector{SROResource}()
     for i in 1:size(cov_m, 1)
@@ -113,10 +114,13 @@ function sro_problem_stuff()
         target
     )
 
-    instantiate_problem!(problem)
+    instantiate_problem!(problem, rng)
 
     rolled_values = [a.rolled_value for a in problem.resources]
     println(rolled_values)
+
+    selected_resources = resources[5:10]
+    println(best_cost_from_selection(target, selected_resources))
 end
 
 

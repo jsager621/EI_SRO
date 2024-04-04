@@ -53,12 +53,24 @@ function instantiate_problem!(problem::SROProblem, rng::Xoshiro=Xoshiro())::Noth
 end
 
 function best_cost_from_selection(target::SROTarget, selected_resources::Vector{SROResource})::Float64
-    v_target = target.v_target
-    # TODO
+    v_remaining = target.v_target
+    total_cost = sum([r.c_selection for r in selected_resources])
 
     # sort resources by their c_per_kw from low to high
+    sorted_resources = sort(selected_resources, by=(r->r.c_per_kw))
 
     # select kw from them up to their generated amount in this order until target is met
+    for r in sorted_resources
+        if v_remaining >= r.rolled_value
+            total_cost += r.c_per_kw * r.rolled_value
+            v_remaining -= r.rolled_value
+        else
+            total_cost += r.c_per_kw * v_remaining
+            break
+        end
+    end
+
+    return total_cost
 end
 
 end
