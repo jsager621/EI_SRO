@@ -5,18 +5,36 @@ using Distributions
 using Copulas
 using Random
 
-export SROResource, SROTarget, SROProblem, instantiate_problem!, best_cost_from_selection
+export SROResource, SROTarget, SROProblem, SROSolution, instantiate_problem!, best_cost_from_selection
 
+
+"""
+Resource described by a continuous distributions for value generation and a linear cost function.
+The cost function is set to: c = c_selection + rolled_value * c_per_w.
+
+possible_values - Distribution of values
+scale - Factor the rolled value gets multiplied by before rolling, to change units without changing the distribution
+c_selection - cost of selection
+c_per_w - cost of each unit of rolled value
+rolled_value - actual value achieved when instantiating the problem
+"""
 mutable struct SROResource
     possible_values::ContinuousUnivariateDistribution
-    c_selection::Float64
-    c_per_kw::Float64
-    rolled_value::Float64
+    scale::Float64
+    c_selection::Int64
+    c_per_w::Int64
+    rolled_value::Int64 # v in w
 end
 
 struct SROTarget
     p_target::Float64
-    v_target::Float64
+    v_target::Int64
+end
+
+struct SROSolution
+    chosen_resources::Vector{SROResource}
+    total_cost::Int64
+    v_remaining::Int64
 end
 
 """
@@ -46,7 +64,8 @@ function instantiate_problem!(problem::SROProblem, rng::Xoshiro=Xoshiro())::Noth
     rolled_values = rand(rng, d,1)
 
     for i in eachindex(rolled_values)
-        problem.resources[i].rolled_value = rolled_values[i]
+        scale = problem.resources[i].scale
+        problem.resources[i].rolled_value = round(Int, scale * rolled_values[i])
     end
 
     return nothing

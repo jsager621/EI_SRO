@@ -2,7 +2,6 @@ using Copulas, Distributions, Random, FromFile
 @from "src/sro/sro_problem_generation.jl" using SROProblems
 @from "src/sro/solvers/solver.jl" using SROSolvers
 
-
 # covariance matrix with full independence
 COV_12x12_INDEPENDENT = 
 [
@@ -95,17 +94,13 @@ function sro_problem_stuff()
     cov_m = COV_12x12_5_2_5
     resources = Vector{SROResource}()
     for i in 1:size(cov_m, 1)
-        new_resource = SROResource(
-            Normal(10, 5),
-            float(i),
-            float(i),
-            0)
+        new_resource = SROResource(Normal(10, 5), 1000.0, i, i, 0)
         push!(resources, new_resource)
     end
 
     target = SROTarget(
         0.5,
-        30
+        30000
     )
 
     problem = SROProblem(
@@ -115,17 +110,21 @@ function sro_problem_stuff()
     )
 
     instantiate_problem!(problem, rng)
+    println(problem)
 
-    rolled_values = [a.rolled_value for a in problem.resources]
-    println(rolled_values)
+    return problem
+end
 
-    selected_resources = resources[5:10]
-    println(best_cost_from_selection(target, selected_resources))
+function oracle_solver(problem::SROProblem)
+    solution = oracle_solve(problem)
+
+    println(solution)
 end
 
 
 function main()
-    sro_problem_stuff()
+    problem = sro_problem_stuff()
+    # oracle_solver(problem)
 end
 
 main()
