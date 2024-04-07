@@ -116,7 +116,9 @@ function sro_problem_stuff()
 end
 
 function oracle_solver(problem::SROProblem)
-    solution = oracle_solve(problem)
+    @time solution = oracle_solve(problem)
+    @time solution = oracle_solve(problem)
+    @time solution = oracle_solve(problem)
 
     println(solution)
 end
@@ -124,7 +126,7 @@ end
 
 function main()
     problem = sro_problem_stuff()
-    # oracle_solver(problem)
+    oracle_solver(problem)
 end
 
 main()

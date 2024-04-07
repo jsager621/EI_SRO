@@ -1,4 +1,5 @@
 module SROSolvers
-include("oracle.jl")
+export oracle_solve
 
+include("oracle.jl")
 end
