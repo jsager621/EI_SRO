@@ -110,23 +110,26 @@ function sro_problem_stuff()
     )
 
     instantiate_problem!(problem, rng)
-    println(problem)
-
     return problem
 end
 
 function oracle_solver(problem::SROProblem)
-    @time solution = oracle_solve(problem)
-    @time solution = oracle_solve(problem)
-    @time solution = oracle_solve(problem)
-
-    println(solution)
+    solution = oracle_solve(problem)
+    println(solution.total_cost)
 end
+
+function simple_solvers(problem::SROProblem)
+    solution = take_all(problem)
+    println(solution.total_cost)
+end
+
+
 
 
 function main()
     problem = sro_problem_stuff()
     oracle_solver(problem)
+    simple_solvers(problem)
 end
 
 main()

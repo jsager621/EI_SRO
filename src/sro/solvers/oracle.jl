@@ -2,8 +2,6 @@
 using JuMP
 using HiGHS
 using InvertedIndices
-using FromFile
-@from "../sro_problem_generation.jl" using SROProblems
 
 """
 Solves a given instantiated SRO problem using full knowledge of the rolled_value of each resource.
@@ -23,9 +21,7 @@ assuming a solution exist (i.e. sum(v_r) >= v_target).
 function oracle_solve(problem::SROProblem)::SROSolution
     resources = problem.resources
     v_target = problem.target.v_target
-
-    max_value = sum([r.rolled_value for r in resources])
-    knapsack_target = float(max_value - v_target)
+    knapsack_target = float(max_value(resources) - v_target)
 
     if knapsack_target < 0
         return SROSolution(
