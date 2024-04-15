@@ -2,16 +2,19 @@
 using Random
 using CSV
 using DataFrames
+using Distributions
 using JSON
 
 THIS_DIR = @__DIR__
 TIME_SERIES_DIR = THIS_DIR * "/time_series"
-CATEGORY_TO_FILE = {
-    "cloudy": TIME_SERIES_DIR * "pv_cloudy_day_10kW.csv",
-    "sunny": TIME_SERIES_DIR * "pv_sunny_day_10kW.csv",
-    "low": TIME_SERIES_DIR * "wind_low_day.csv",
-    "mid": TIME_SERIES_DIR * "wind_mid_day.csv",
-    "high": TIME_SERIES_DIR * "wind_high_day.csv"}
+CATEGORY_TO_FILE = Dict(
+    "cloudy" => TIME_SERIES_DIR * "pv_cloudy_day_10kW.csv",
+    "sunny" => TIME_SERIES_DIR * "pv_sunny_day_10kW.csv",
+    "low" => TIME_SERIES_DIR * "wind_low_day.csv",
+    "mid" => TIME_SERIES_DIR * "wind_mid_day.csv",
+    "high" => TIME_SERIES_DIR * "wind_high_day.csv")
+
+OUTDIR = THIS_DIR * "/scenarios"
 
 # defines possible ranges for output and distributions
 # for the given category
@@ -50,22 +53,56 @@ function parse_args()
     return 0
 end
 
-function make_pv_gen(rng, pv_category, n)
+function make_pv_gen(rng, pv_category)
     # normal noise on real time series
     # values use PV_COV value between each other
     raw_values = CSV.read(CATEGORY_TO_FILE[pv_category], DataFrame)
     values_vector = raw_values[!, :P_REL]
+    dist_std = [PV_STD for _ in 1:length(values_vector)]
+    rolled_values = zeros(Float64, length(values_vector))
 
+    for i in eachindex(rolled_values)
+        dist = Normal(values_vector[i], dist_std[i])
+        rv = rand(rng, dist[i])
+        if rv > PV_MAX
+            rv = PV_MAX
+        end
+        if rv < 0
+            rv = 0
+        end
+
+        rolled_values[i] = rv
+    end
+
+    return Dict("std" => dist_std, "rolled" => rolled_values)
 end
 
-function make_wind_gen(rng, wind_category, n)
+function make_wind_gen(rng, wind_category)
     # normal noise on real time series
     # values use WIND_COV value between each other
     raw_values = CSV.read(CATEGORY_TO_FILE[wind_category], DataFrame)
+    values_vector = raw_values[!, :P_REL]
 
+    dist_std = [WIND_STD for _ in 1:length(values_vector)]
+    rolled_values = zeros(Float64, length(values_vector))
+
+    for i in eachindex(rolled_values)
+        dist = Normal(values_vector[i], dist_std[i])
+        rv = rand(rng, dist[i])
+        if rv > WIND_MAX
+            rv = WIND_MAX
+        end
+        if rv < 0
+            rv = 0
+        end
+
+        rolled_values[i] = rv
+    end
+
+    return Dict("std" => dist_std, "rolled" => rolled_values)
 end
 
-function make_other_gen(rng, n)
+function make_other_gen(rng)
     # normal noise
     # values use OTHER_COV value between each other 
 
@@ -77,47 +114,57 @@ function make_load(rng, n)
 
 end
 
-function merge_data(time_series)
-
+function save_scenario(data, scenario_name)
+    fname = OUTDIR * "/" * scenario_name * ".json"
+    open(fname, "w") do f
+        json_data = JSON.json(data)
+        write(f, json_data)
+    end
 end
 
-function save_scenario(data)
+function make_scenario(pv_category, wind_category, rng, scenario_name)
+    output = Dict{String, Any}()
 
-end
-
-function make_scenario(pv_category, wind_category, rng)
     # given this random seed and the wind/pv category, generate:
     # 12 load datasets
     #   -> slightly varied by gaussian noise
     # fields: load
-    load = make_load(rng, N_LOAD)
+    for i in 1:N_LOAD
+        load = make_load(rng, N_LOAD)
+        f_name = "load_" * str(i)
+        output[f_name] = load
+    end
 
     # 4 PV curves
-    # - beta, slight variation in parameters
-    # - and their instantiated rolled values
-    # fields: alpha, beta, scale, p_rolled
-    pv_gen = make_pv_gen(rng, pv_category, N_PV)
+    for i in 1:N_PV
+        pv_gen = make_pv_gen(rng, pv_category)
+        f_name = "pv_" * str(i)
+        output[f_name] = pv_gen
+    end
+    
 
     # 4 wind curves
-    # - weibull, slight variation in parameters
-    # - and their instantiated rolled values
-    # fields: lambda, k, scale, p_rolled
-    wind_gen = make_wind_gen(rng, wind_category, N_WIND)
+    for i in 1:N_WIND
+        wind_gen = make_wind_gen(rng, wind_category)
+        f_name = "wind_" * str(i)
+        output[f_name] = wind_gen
+    end
 
     # 4 battery curves
-    # - gaussian, between min/max state of charge
-    # - and their instantiated rolled values
-    # fields: mean, std, min, max, p_rolled
-    other_gen = make_other_gen(rng, N_BAT)
+    for i in 1:N_OTHER
+        other_gen = make_other_gen(rng)
+        f_name = "other_" * str(i)
+        output[f_name] = other_gen
+    end
+    
 
     # save everything to csv
-    data = merge_data([load, pv_gen, wind_gen, other_gen])
-    save_scenario(data)
+    save_scenario(output, scenario_name)
 end
 
 
 function main()
-    seed = parse_args()
+    seed, scenario_name = parse_args()
 
     categories = [
         ("cloudy", "low"),
@@ -130,7 +177,7 @@ function main()
 
     for (pv, wind) in categories
         rng = Xoshiro(seed)
-        make_scenario(pv, wind, rng)
+        make_scenario(pv, wind, rng, scenario_name)
     end
 end
 
