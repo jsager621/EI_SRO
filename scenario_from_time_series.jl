@@ -13,6 +13,7 @@ CATEGORY_TO_FILE = Dict(
     "low" => TIME_SERIES_DIR * "wind_low_day.csv",
     "mid" => TIME_SERIES_DIR * "wind_mid_day.csv",
     "high" => TIME_SERIES_DIR * "wind_high_day.csv")
+LOAD_FILE = TIME_SERIES_DIR * "household_load_may_weekday.csv"
 
 OUTDIR = THIS_DIR * "/scenarios"
 
@@ -32,6 +33,11 @@ OTHER_MEAN = 5 * 1000 # 5kw
 OTHER_STD = 2 * 1000 # 2kw
 OTHER_MIN = 0
 OTHER_MAX = 10 * 1000 # max 10kw
+
+# load STD and threshold
+LOAD_STD_LOW = 1 * 1000
+LOAD_STD_HIGH = 2 * 1000
+LOAD_STD_THRESHOLD = 2 * 1000
 
 
 N_PV = N_WIND = N_OTHER = 4
