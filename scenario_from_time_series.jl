@@ -65,9 +65,16 @@ function make_pv_gen!(rng, pv_category, n, output)
     end
 
     copula = GaussianCopula(cov_matrix)
-    marginals = tuple([Normal(values_vector[i], PV_STD) for i in eachindex(values_vector)])
-    dist = SklarDist(copula, marginals)
-    rolled_values = clamp!(rand(rng, dist, 1) * PV_MAX, 0, PV_MAX)
+
+    # n distributions per time step
+    rolled_values = Vector{Vector{Float64}}()
+
+    for i in eachindex(values_vector)
+        marginals = tuple([Normal(values_vector[i], PV_STD) for i in 1:n])
+        dist = SklarDist(copula, marginals)
+        rv = clamp!(rand(rng, dist, 1) * PV_MAX, 0, PV_MAX)
+        push!(rolled_values, rv)
+    end
 
     return Dict("scale" => PV_MAX, "std" => PV_STD, "mean" => values_vector, "rolled" => rolled_values)
 end
@@ -84,17 +91,34 @@ function make_wind_gen!(rng, wind_category, n, output)
     end
 
     copula = GaussianCopula(cov_matrix)
-    marginals = tuple([Normal(values_vector[i], WIND_STD) for i in eachindex(values_vector)])
-    dist = SklarDist(copula, marginals)
-    rolled_values = clamp!(rand(rng, dist, 1) * WIND_MAX, 0, WIND_MAX)
 
-    return Dict("scale" => WIND_MAX, "std" => WIND_STD, "mean" => values_vector, "rolled" => rolled_values)
+    # n distributions per time step
+    rolled_values = Vector{Vector{Float64}}()
+
+    for i in eachindex(values_vector)
+        marginals = tuple([Normal(values_vector[i], WIND_STD) for i in 1:n])
+        dist = SklarDist(copula, marginals)
+        rv = clamp!(rand(rng, dist, 1) * WIND_MAX, 0, WIND_MAX)
+        push!(rolled_values, rv)
+    end
+
+    return Dict("scale" => PV_MAX, "std" => PV_STD, "mean" => values_vector, "rolled" => rolled_values)
 end
 
 function make_other_gen!(rng, n, output)
     # normal noise
     # values use OTHER_COV value between each other 
+    cov_matrix = zeros(Float64, n, n)
+    for (i, j) in Iterators.product(1:n, 1:n)
+        cov_matrix[i, j] = i == j ? 1.0 : OTHER_COV
+    end
+    copula = GaussianCopula(cov_matrix)
 
+    # consisten OTHER_MEAN +- OTHER_STD values 
+    # 96 values, n times
+    marginals = tuple([Normal(OTHER_MEAN, OTHER_STD) for i in 1:n])
+
+    # TODO
 end
 
 function make_load!(rng, n, output)
