@@ -60,8 +60,12 @@ LOAD_COV = 0.3
 
 
 function parse_args()
-    # TODO
-    return 0
+    @assert length(ARGS) < 2 "Missing command line args, please provide seed and scenario name."
+    seed_str = ARGS[1]
+    scenario_name = ARGS[2]
+    seed_float = parse(Float64, seed_str)
+
+    return (seed_float, scenario_name)
 end
 
 function make_pv_gen!(rng, pv_category, n, output)
