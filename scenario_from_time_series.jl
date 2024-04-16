@@ -8,12 +8,12 @@ using JSON
 THIS_DIR = @__DIR__
 TIME_SERIES_DIR = THIS_DIR * "/time_series"
 CATEGORY_TO_FILE = Dict(
-    "cloudy" => TIME_SERIES_DIR * "pv_cloudy_day_10kW.csv",
-    "sunny" => TIME_SERIES_DIR * "pv_sunny_day_10kW.csv",
-    "low" => TIME_SERIES_DIR * "wind_low_day.csv",
-    "mid" => TIME_SERIES_DIR * "wind_mid_day.csv",
-    "high" => TIME_SERIES_DIR * "wind_high_day.csv")
-LOAD_FILE = TIME_SERIES_DIR * "household_load_may_weekday.csv"
+    "cloudy" => TIME_SERIES_DIR * "/pv_cloudy_day_10kW.csv",
+    "sunny" => TIME_SERIES_DIR * "/pv_sunny_day_10kW.csv",
+    "low" => TIME_SERIES_DIR * "/wind_low_day.csv",
+    "mid" => TIME_SERIES_DIR * "/wind_mid_day.csv",
+    "high" => TIME_SERIES_DIR * "/wind_high_day.csv")
+LOAD_FILE = TIME_SERIES_DIR * "/household_load_may_weekday.csv"
 
 OUTDIR = THIS_DIR * "/scenarios"
 
@@ -60,10 +60,10 @@ LOAD_COV = 0.3
 
 
 function parse_args()
-    @assert length(ARGS) < 2 "Missing command line args, please provide seed and scenario name."
+    @assert length(ARGS) > 1 "Missing command line args, please provide seed and scenario name."
     seed_str = ARGS[1]
     scenario_name = ARGS[2]
-    seed_float = parse(Float64, seed_str)
+    seed_float = parse(Int64, seed_str)
 
     return (seed_float, scenario_name)
 end
@@ -85,9 +85,9 @@ function make_pv_gen!(rng, pv_category, n, output)
     rolled_values = Vector{Vector{Float64}}()
 
     for i in eachindex(values_vector)
-        marginals = tuple([Normal(values_vector[i], PV_STD) for i in 1:n])
+        marginals = tuple([Normal(values_vector[i], PV_STD) for i in 1:n]...)
         dist = SklarDist(copula, marginals)
-        rv = clamp!(rand(rng, dist, 1) * PV_MAX, 0, PV_MAX)
+        rv = vec(clamp!(rand(rng, dist, 1) * PV_MAX, 0, PV_MAX))
         push!(rolled_values, rv)
     end
 
@@ -116,9 +116,9 @@ function make_wind_gen!(rng, wind_category, n, output)
     rolled_values = Vector{Vector{Float64}}()
 
     for i in eachindex(values_vector)
-        marginals = tuple([Normal(values_vector[i], WIND_STD) for i in 1:n])
+        marginals = tuple([Normal(values_vector[i], WIND_STD) for i in 1:n]...)
         dist = SklarDist(copula, marginals)
-        rv = clamp!(rand(rng, dist, 1) * WIND_MAX, WIND_MIN, WIND_MAX)
+        rv = vec(clamp!(rand(rng, dist, 1) * WIND_MAX, WIND_MIN, WIND_MAX))
         push!(rolled_values, rv)
     end
 
@@ -141,9 +141,14 @@ function make_other_gen!(rng, n, output)
 
     # consisten OTHER_MEAN +- OTHER_STD values 
     # 96 values, n times
-    marginals = tuple([Normal(OTHER_MEAN, OTHER_STD) for i in 1:n])
+    rolled_values = Vector{Vector{Float64}}()
+    marginals = tuple([Normal(OTHER_MEAN, OTHER_STD) for i in 1:n]...)
     dist = SklarDist(copula, marginals)
-    rolled_values = clamp!(rand(rng, dist, 96), OTHER_MIN, OTHER_MAX)
+
+    for i in 1:96
+        rv = vec(clamp!(rand(rng, dist, 1), OTHER_MIN, OTHER_MAX))
+        push!(rolled_values, rv)
+    end
 
     output["OTHER"] = Dict(
         "min" => OTHER_MIN,
@@ -168,9 +173,9 @@ function make_load!(rng, n, output)
 
     for i in eachindex(values_vector)
         std = values_vector[i] < LOAD_STD_THRESHOLD ? LOAD_STD_LOW : LOAD_STD_HIGH
-        marginals = tuple([Normal(values_vector[i], std) for i in 1:n])
+        marginals = tuple([Normal(values_vector[i], std) for _ in 1:n]...)
         dist = SklarDist(copula, marginals)
-        rv = clamp!(rand(rng, dist, 1), LOAD_MIN, LOAD_MAX)
+        rv = vec(clamp!(rand(rng, dist, 1), LOAD_MIN, LOAD_MAX))
         push!(rolled_values, rv)
     end
 
@@ -187,7 +192,7 @@ function save_scenario(data, scenario_name)
     fname = OUTDIR * "/" * scenario_name * ".json"
     open(fname, "w") do f
         json_data = JSON.json(data)
-        write(f, json_data)
+        JSON.write(f, json_data)
     end
 end
 
@@ -224,11 +229,8 @@ function main()
         ("sunny", "high"),
     ]
 
-    for (pv, wind) in categories
+    for (i, (pv, wind)) in enumerate(categories)
         rng = Xoshiro(seed)
-        make_scenario(pv, wind, rng, scenario_name)
+        make_scenario(pv, wind, rng, scenario_name * string(i))
     end
 end
-
-
-main()
