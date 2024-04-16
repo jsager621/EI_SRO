@@ -21,10 +21,12 @@ OUTDIR = THIS_DIR * "/scenarios"
 # for the given category
 
 # PV
+PV_MIN = 0
 PV_MAX = 10 * 1000 # 10 kw
 PV_STD = 0.2 # 20%
 
 # wind
+WIND_MIN = 0
 WIND_MAX = 10 * 1000 # 10 kw
 WIND_STD = 0.3 # 30%
 
@@ -38,6 +40,8 @@ OTHER_MAX = 10 * 1000 # max 10kw
 LOAD_STD_LOW = 1 * 1000
 LOAD_STD_HIGH = 2 * 1000
 LOAD_STD_THRESHOLD = 2 * 1000
+LOAD_MIN = 0
+LOAD_MAX = 10 * 1000
 
 
 N_PV = N_WIND = N_OTHER = 4
@@ -50,9 +54,9 @@ N_LOAD = N_PV + N_WIND + N_OTHER
 # The problem instantiation itself can handle arbitrary covariance matrices and
 # the model will later be extended to use non-gaussia copulas as well.
 PV_COV = 0.7
-WIND_COV = 0.4
+WIND_COV = 0.5
 OTHER_COV = 0.1
-LOAD_COV = 0.2
+LOAD_COV = 0.3
 
 
 function parse_args()
@@ -84,7 +88,8 @@ function make_pv_gen!(rng, pv_category, n, output)
     end
 
     output["PV"] = Dict(
-        "scale" => PV_MAX,
+        "min" => PV_MIN,
+        "max" => PV_MAX,
         "std" => PV_STD,
         "mean" => values_vector,
         "rolled" => rolled_values)
@@ -109,12 +114,13 @@ function make_wind_gen!(rng, wind_category, n, output)
     for i in eachindex(values_vector)
         marginals = tuple([Normal(values_vector[i], WIND_STD) for i in 1:n])
         dist = SklarDist(copula, marginals)
-        rv = clamp!(rand(rng, dist, 1) * WIND_MAX, 0, WIND_MAX)
+        rv = clamp!(rand(rng, dist, 1) * WIND_MAX, WIND_MIN, WIND_MAX)
         push!(rolled_values, rv)
     end
 
     output["WIND"] = Dict(
-        "scale" => PV_MAX,
+        "min" => WIND_MIN,
+        "max" => WIND_MAX,
         "std" => PV_STD,
         "mean" => values_vector,
         "rolled" => rolled_values)
@@ -133,7 +139,7 @@ function make_other_gen!(rng, n, output)
     # 96 values, n times
     marginals = tuple([Normal(OTHER_MEAN, OTHER_STD) for i in 1:n])
     dist = SklarDist(copula, marginals)
-    rolled_values = clamp!(rand(rng, dist, 96), 0, OTHER_MAX)
+    rolled_values = clamp!(rand(rng, dist, 96), OTHER_MIN, OTHER_MAX)
 
     output["OTHER"] = Dict(
         "min" => OTHER_MIN,
@@ -146,7 +152,31 @@ end
 function make_load!(rng, n, output)
     # normal noise
     # values use LOAD_COV value between each other
+    raw_values = CSV.read(LOAD_FILE, DataFrame)
+    values_vector = raw_values[!, :P_IN_W]
 
+    cov_matrix = zeros(Float64, n, n)
+    for (i, j) in Iterators.product(1:n, 1:n)
+        cov_matrix[i, j] = i == j ? 1.0 : LOAD_COV
+    end
+    copula = GaussianCopula(cov_matrix)
+    rolled_values = Vector{Vector{Float64}}()
+
+    for i in eachindex(values_vector)
+        std = values_vector[i] < LOAD_STD_THRESHOLD ? LOAD_STD_LOW : LOAD_STD_HIGH
+        marginals = tuple([Normal(values_vector[i], std) for i in 1:n])
+        dist = SklarDist(copula, marginals)
+        rv = clamp!(rand(rng, dist, 1), LOAD_MIN, LOAD_MAX)
+        push!(rolled_values, rv)
+    end
+
+    output["LOAD"] = Dict(
+        "std_threshold" => LOAD_STD_THRESHOLD,
+        "std_low" => LOAD_STD_LOW,
+        "std_high" => LOAD_STD_HIGH,
+        "min" => LOAD_MIN,
+        "max" => LOAD_MAX,
+    )
 end
 
 function save_scenario(data, scenario_name)
