@@ -76,7 +76,11 @@ function make_pv_gen!(rng, pv_category, n, output)
         push!(rolled_values, rv)
     end
 
-    return Dict("scale" => PV_MAX, "std" => PV_STD, "mean" => values_vector, "rolled" => rolled_values)
+    output["PV"] = Dict(
+        "scale" => PV_MAX,
+        "std" => PV_STD,
+        "mean" => values_vector,
+        "rolled" => rolled_values)
 end
 
 function make_wind_gen!(rng, wind_category, n, output)
@@ -102,7 +106,11 @@ function make_wind_gen!(rng, wind_category, n, output)
         push!(rolled_values, rv)
     end
 
-    return Dict("scale" => PV_MAX, "std" => PV_STD, "mean" => values_vector, "rolled" => rolled_values)
+    output["WIND"] = Dict(
+        "scale" => PV_MAX,
+        "std" => PV_STD,
+        "mean" => values_vector,
+        "rolled" => rolled_values)
 end
 
 function make_other_gen!(rng, n, output)
@@ -117,8 +125,15 @@ function make_other_gen!(rng, n, output)
     # consisten OTHER_MEAN +- OTHER_STD values 
     # 96 values, n times
     marginals = tuple([Normal(OTHER_MEAN, OTHER_STD) for i in 1:n])
+    dist = SklarDist(copula, marginals)
+    rolled_values = clamp!(rand(rng, dist, 96), 0, OTHER_MAX)
 
-    # TODO
+    output["OTHER"] = Dict(
+        "min" => OTHER_MIN,
+        "max" => OTHER_MAX,
+        "mean" => OTHER_MEAN,
+        "std" => OTHER_STD,
+        "rolled" => rolled_values)
 end
 
 function make_load!(rng, n, output)
