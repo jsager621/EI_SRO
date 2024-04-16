@@ -50,6 +50,7 @@ LOAD_COV = 0.2
 
 
 function parse_args()
+    # TODO
     return 0
 end
 
@@ -155,25 +156,18 @@ function make_scenario(pv_category, wind_category, rng, scenario_name)
 
     # given this random seed and the wind/pv category, generate:
     # 12 load datasets
-    #   -> slightly varied by gaussian noise
-    # fields: load
     make_load!(rng, N_LOAD, output)
-
 
     # 4 PV curves
     make_pv_gen!(rng, pv_category, N_PV, output)
 
-
-
     # 4 wind curves
-    wind_gen = make_wind_gen!(rng, wind_category, N_WIND, output)
+    make_wind_gen!(rng, wind_category, N_WIND, output)
 
     # 4 battery curves
-    other_gen = make_other_gen!(rng, N_OTHER, output)
+    make_other_gen!(rng, N_OTHER, output)
 
-
-
-    # save everything to csv
+    # save everything to json
     save_scenario(output, scenario_name)
 end
 
