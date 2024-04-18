@@ -85,9 +85,9 @@ function make_pv_gen!(rng, pv_category, n, output)
     rolled_values = Vector{Vector{Float64}}()
 
     for i in eachindex(values_vector)
-        marginals = tuple([Normal(values_vector[i], PV_STD) for i in 1:n]...)
+        marginals = tuple([truncated(Normal(values_vector[i], PV_STD); lower=0, upper=1) for i in 1:n]...)
         dist = SklarDist(copula, marginals)
-        rv = vec(clamp!(rand(rng, dist, 1) * PV_MAX, 0, PV_MAX))
+        rv = vec(rand(rng, dist, 1) * PV_MAX)
         push!(rolled_values, rv)
     end
 
@@ -116,9 +116,9 @@ function make_wind_gen!(rng, wind_category, n, output)
     rolled_values = Vector{Vector{Float64}}()
 
     for i in eachindex(values_vector)
-        marginals = tuple([Normal(values_vector[i], WIND_STD) for i in 1:n]...)
+        marginals = tuple([truncated(Normal(values_vector[i], WIND_STD); lower=0, upper=1) for i in 1:n]...)
         dist = SklarDist(copula, marginals)
-        rv = vec(clamp!(rand(rng, dist, 1) * WIND_MAX, WIND_MIN, WIND_MAX))
+        rv = vec(rand(rng, dist, 1) * WIND_MAX)
         push!(rolled_values, rv)
     end
 
@@ -142,11 +142,11 @@ function make_other_gen!(rng, n, output)
     # consisten OTHER_MEAN +- OTHER_STD values 
     # 96 values, n times
     rolled_values = Vector{Vector{Float64}}()
-    marginals = tuple([Normal(OTHER_MEAN, OTHER_STD) for i in 1:n]...)
+    marginals = tuple([truncated(Normal(OTHER_MEAN, OTHER_STD); lower=OTHER_MIN, upper=OTHER_MAX) for i in 1:n]...)
     dist = SklarDist(copula, marginals)
 
     for i in 1:96
-        rv = vec(clamp!(rand(rng, dist, 1), OTHER_MIN, OTHER_MAX))
+        rv = vec(rand(rng, dist, 1))
         push!(rolled_values, rv)
     end
 
@@ -173,9 +173,9 @@ function make_load!(rng, n, output)
 
     for i in eachindex(values_vector)
         std = values_vector[i] < LOAD_STD_THRESHOLD ? LOAD_STD_LOW : LOAD_STD_HIGH
-        marginals = tuple([Normal(values_vector[i], std) for _ in 1:n]...)
+        marginals = tuple([truncated(Normal(values_vector[i], std); lower=LOAD_MIN, upper=LOAD_MAX) for _ in 1:n]...)
         dist = SklarDist(copula, marginals)
-        rv = vec(clamp!(rand(rng, dist, 1), LOAD_MIN, LOAD_MAX))
+        rv = vec(rand(rng, dist, 1))
         push!(rolled_values, rv)
     end
 
@@ -234,3 +234,5 @@ function main()
         make_scenario(pv, wind, rng, scenario_name * string(i))
     end
 end
+
+main()
