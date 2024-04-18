@@ -75,9 +75,9 @@ function basic_function_test()
     
     cov_m = COV_12x12_5_2_5
     C = GaussianCopula(cov_m)
-    dists = Vector{Normal}()
+    dists = Vector{UnivariateDistribution}()
     for i in 1:size(cov_m, 1)
-        push!(dists, Normal(10, 5))
+        push!(dists, truncated(Normal(10, 5); lower=0, upper=20))
     end
 
     dists = Tuple(dists)
@@ -85,6 +85,9 @@ function basic_function_test()
     D = SklarDist(C,dists)
     x = rand(rng, D,1)
     display(x)
+
+    S = cdf(D, Float64[1,1,1,1,1,1,1,1,1,1,1])
+    display(S)
 
     println("done")
 end
@@ -127,9 +130,10 @@ end
 
 
 function main()
-    problem = sro_problem_stuff()
-    oracle_solver(problem)
-    simple_solvers(problem)
+    # problem = sro_problem_stuff()
+    # oracle_solver(problem)
+    # simple_solvers(problem)
+    basic_function_test()
 end
 
 main()

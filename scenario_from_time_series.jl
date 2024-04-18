@@ -23,7 +23,7 @@ OUTDIR = THIS_DIR * "/scenarios"
 # PV
 PV_MIN = 0
 PV_MAX = 10 * 1000 # 10 kw
-PV_STD = 0.2 # 20%
+PV_STD = 0.15 # 15%
 
 # wind
 WIND_MIN = 0
@@ -85,6 +85,12 @@ function make_pv_gen!(rng, pv_category, n, output)
     rolled_values = Vector{Vector{Float64}}()
 
     for i in eachindex(values_vector)
+        if values_vector[i] == 0
+            # ensure we still have a clear day/night cycle in PV
+            push!(rolled_values, [0.0 for _ in 1:n])
+            continue
+        end
+
         marginals = tuple([truncated(Normal(values_vector[i], PV_STD); lower=0, upper=1) for i in 1:n]...)
         dist = SklarDist(copula, marginals)
         rv = vec(rand(rng, dist, 1) * PV_MAX)
