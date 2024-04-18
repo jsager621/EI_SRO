@@ -1,5 +1,5 @@
 module SROSolvers
-export oracle_solve, take_all
+export oracle_solve, take_all, simplified_full_knowledge_solve
 
 using FromFile
 @from "../sro_problem_generation.jl" using SROProblems
@@ -7,4 +7,5 @@ using FromFile
 include("utils.jl")
 include("oracle.jl")
 include("simple_heuristics.jl")
+include("full_knowledge.jl")
 end
