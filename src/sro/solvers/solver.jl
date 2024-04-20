@@ -1,5 +1,5 @@
 module SROSolvers
-export oracle_solve, take_all, simplified_full_knowledge_solve
+export oracle_solve, take_all, fk_truncated_normal_fit
 
 using FromFile
 @from "../sro_problem_generation.jl" using SROProblems
