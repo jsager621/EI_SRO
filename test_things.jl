@@ -102,7 +102,7 @@ function sro_problem_stuff()
     end
 
     target = SROTarget(
-        0.5,
+        0.8,
         30
     )
 
@@ -128,7 +128,7 @@ function simple_solvers(problem::SROProblem)
 end
 
 function fk_solver(rng, problem::SROProblem)
-    solution = fk_truncated_normal_fit(rng, problem, 100)
+    solution = fk_truncated_normal_fit(rng, problem, 1000)
     println(solution.total_cost)
     println(solution.v_remaining)
 end
@@ -141,10 +141,10 @@ function main()
     problem = sro_problem_stuff()
     oracle_solver(problem)
     simple_solvers(problem)
-    @time fk_solver(rng, problem)
-    @time fk_solver(rng, problem)
-    @time fk_solver(rng, problem)
-    @time fk_solver(rng, problem)
+    for i in 1:10
+        println("Fit solver run: ", i)
+        fk_solver(rng, problem)
+    end
 end
 
 main()
