@@ -97,13 +97,13 @@ function sro_problem_stuff()
     cov_m = COV_12x12_5_2_5
     resources = Vector{SROResource}()
     for i in 1:size(cov_m, 1)
-        new_resource = SROResource(Normal(10, 5), 1000.0, i, i, 0)
+        new_resource = SROResource(truncated(Normal(10, 5); lower=0, upper=20), 100, 10, 0)
         push!(resources, new_resource)
     end
 
     target = SROTarget(
         0.5,
-        30000
+        30
     )
 
     problem = SROProblem(
@@ -124,16 +124,27 @@ end
 function simple_solvers(problem::SROProblem)
     solution = take_all(problem)
     println(solution.total_cost)
+    println(solution.v_remaining)
+end
+
+function fk_solver(rng, problem::SROProblem)
+    solution = fk_truncated_normal_fit(rng, problem, 100)
+    println(solution.total_cost)
+    println(solution.v_remaining)
 end
 
 
 
 
 function main()
-    # problem = sro_problem_stuff()
-    # oracle_solver(problem)
-    # simple_solvers(problem)
-    basic_function_test()
+    rng = Xoshiro(1)
+    problem = sro_problem_stuff()
+    oracle_solver(problem)
+    simple_solvers(problem)
+    @time fk_solver(rng, problem)
+    @time fk_solver(rng, problem)
+    @time fk_solver(rng, problem)
+    @time fk_solver(rng, problem)
 end
 
 main()
