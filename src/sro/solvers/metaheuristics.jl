@@ -28,7 +28,7 @@ c2 - 1.43
 w - 0.69
 v_max - 4.0
 """
-function pbsro_truncated_normal_fit(rng, problem::SROProblem, n_samples::Int64)::SROSolution
+function bpso_truncated_normal_fit(rng, problem::SROProblem, n_samples::Int64)::SROSolution
     sigmoid(z::Real) = one(z) / (one(z) + exp(-z))
     
     resources = problem.resources

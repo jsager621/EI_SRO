@@ -1,5 +1,5 @@
 module SROSolvers
-export oracle_solve, take_all, fk_truncated_normal_fit, pbsro_truncated_normal_fit
+export oracle_solve, take_all, fk_truncated_normal_fit, bpso_truncated_normal_fit, max_value, remaining_target, total_cost
 
 using FromFile
 @from "../sro_problem_generation.jl" using SROProblems

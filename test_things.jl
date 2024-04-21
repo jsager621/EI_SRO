@@ -134,13 +134,10 @@ function fk_solver(rng, problem::SROProblem)
 end
 
 function fk_heuristic(rng, problem::SROProblem)
-    solution = pbsro_truncated_normal_fit(rng, problem, 1000)
+    solution = bpso_truncated_normal_fit(rng, problem, 1000)
     println(solution.total_cost)
     println(solution.v_remaining)
 end
-
-
-
 
 
 function main()

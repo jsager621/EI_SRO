@@ -1,1 +1,0 @@
-# weibull for wind, beta for PV, normal for "other", make arbitrary optimization problem
