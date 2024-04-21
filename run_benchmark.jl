@@ -2,8 +2,8 @@ using Copulas, Distributions, Random, FromFile, JSON, LinearAlgebra
 @from "src/sro/sro_problem_generation.jl" using SROProblems
 @from "src/sro/solvers/solver.jl" using SROSolvers
 
-n_problems = 1
-n_instantiations = 100
+n_problems = 100
+n_instantiations = 1000
 n_resources = 10
 c_selection = 100
 c_per_w = 10
@@ -24,12 +24,12 @@ function make_normal_problems(rng, n_problems)
     mean_lower = 50.0
     mean_upper = 150.0
     mean_mean = 100.0
-    mean_std = 40.0
+    mean_std = 60.0
     mean_dist = truncated(Normal(mean_mean, mean_std); lower=mean_lower, upper=mean_upper)
     resource_means = vec(rand(rng, mean_dist, total_resources))
 
     std_lower = 10.0
-    std_upper = 40.0
+    std_upper = 50.0
     std_mean = 25.0
     std_std = 10.0
     std_dist = truncated(Normal(std_mean, std_std); lower=std_lower, upper=std_upper)
@@ -158,9 +158,13 @@ function main()
 
     results = Dict{String, Any}()
     results["normals"] = run_problem_set(rng, normals, n_instantiations)
-    println(results["1"]["oracle"][2])
-    println(results["1"]["fk_truncated"][2])
-    println(results["1"]["pso"][2])
+    println(results["normals"]["1"]["oracle"][2])
+    println(results["normals"]["1"]["fk_truncated"][2])
+    println(results["normals"]["1"]["pso"][2])
+
+    println(results["normals"]["1"]["oracle"][3])
+    println(results["normals"]["1"]["fk_truncated"][3])
+    println(results["normals"]["1"]["pso"][3])
     # results["beta"] = run_problem_set(rng, beta, n_instantiations)
     # results["weibull"] = run_problem_set(rng, weibull, n_instantiations)
     # results["mixed"] = run_problem_set(rng, mixed, n_instantiations)
