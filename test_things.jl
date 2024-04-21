@@ -126,12 +126,19 @@ function simple_solvers(problem::SROProblem)
     println(solution.total_cost)
     println(solution.v_remaining)
 end
-
+-
 function fk_solver(rng, problem::SROProblem)
     solution = fk_truncated_normal_fit(rng, problem, 1000)
     println(solution.total_cost)
     println(solution.v_remaining)
 end
+
+function fk_heuristic(rng, problem::SROProblem)
+    solution = pbsro_truncated_normal_fit(rng, problem, 1000)
+    println(solution.total_cost)
+    println(solution.v_remaining)
+end
+
 
 
 
@@ -143,7 +150,12 @@ function main()
     simple_solvers(problem)
     for i in 1:10
         println("Fit solver run: ", i)
-        fk_solver(rng, problem)
+        @time fk_solver(rng, problem)
+    end
+
+    for i in 1:10
+        println("PSO solver run: ", i)
+        @time fk_heuristic(rng, problem)
     end
 end
 
