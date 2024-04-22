@@ -2,10 +2,10 @@ using Copulas, Distributions, Random, FromFile, JSON, LinearAlgebra
 @from "src/sro/sro_problem_generation.jl" using SROProblems
 @from "src/sro/solvers/solver.jl" using SROSolvers
 
-n_problems = 100
+n_problems = 1
 n_instantiations = 1000
 n_resources = 10
-c_selection = 100
+c_selection = 1
 c_per_w = 10
 n_samples = 1000
 
@@ -47,7 +47,7 @@ function make_normal_problems(rng, n_problems)
         problem_resources = Vector{SROResource}()
 
         for j in 1:n_resources
-            resource_dist = truncated(Normal(resource_means[offset + j], resource_stds[offset + j]); lower=resource_lower, upper=resource_upper)
+            resource_dist = truncated(Normal(resource_means[offset+j], resource_stds[offset+j]); lower=resource_lower, upper=resource_upper)
             new_resource = SROResource(
                 resource_dist,
                 c_selection,
@@ -95,10 +95,10 @@ function make_problem_sets(rng, n_problems)
 end
 
 function run_problem_set(rng, problem_set, n_instantiations)
-    output = Dict{String, Any}()
+    output = Dict{String,Any}()
 
     for (i, problem) in enumerate(problem_set)
-        output[string(i)] = Dict{String, Any}()
+        output[string(i)] = Dict{String,Any}()
 
         instantiate_problem!(problem, rng)
         fk_truncated_solution = fk_truncated_normal_fit(rng, problem, n_samples)
@@ -107,10 +107,12 @@ function run_problem_set(rng, problem_set, n_instantiations)
         fk_truncated_costs = zeros(Float64, n_instantiations)
         pso_costs = zeros(Float64, n_instantiations)
         oracle_costs = zeros(Float64, n_instantiations)
+        take_all_costs = zeros(Float64, n_instantiations)
 
         oracle_n_no_remaining = 0
         fk_truncated_n_no_remaining = 0
         pso_n_no_remaining = 0
+        take_all_n_no_remaining = 0
 
         # NOTE: we abuse the fact here that resource subsets are shared by reference
         for i in 1:n_instantiations
@@ -120,9 +122,11 @@ function run_problem_set(rng, problem_set, n_instantiations)
             oracle_costs[i] = oracle_solution.total_cost
             fk_truncated_costs[i] = total_cost(fk_truncated_solution.chosen_resources)
             pso_costs[i] = total_cost(pso_solution.chosen_resources)
+            take_all_costs[i] = total_cost(problem.resources)
 
             if oracle_solution.v_remaining == 0
                 oracle_n_no_remaining += 1
+                take_all_n_no_remaining += 1
             end
 
             if remaining_target(fk_truncated_solution.chosen_resources, problem.target.v_target) == 0
@@ -137,6 +141,7 @@ function run_problem_set(rng, problem_set, n_instantiations)
         output[string(i)]["fk_truncated"] = (fk_truncated_costs, mean(fk_truncated_costs), fk_truncated_n_no_remaining)
         output[string(i)]["pso"] = (pso_costs, mean(pso_costs), pso_n_no_remaining)
         output[string(i)]["oracle"] = (oracle_costs, mean(oracle_costs), oracle_n_no_remaining)
+        output[string(i)]["take_all"] = (take_all_costs, mean(take_all_costs), take_all_n_no_remaining)
     end
 
     return output
@@ -152,19 +157,21 @@ function main()
     run_name = ARGS[2]
 
     rng = Xoshiro(seed)
-    
+
     # normals, beta, weibull, mixed = make_problem_sets(rng, n_problems)
     normals = make_normal_problems(rng, n_problems)
 
-    results = Dict{String, Any}()
+    results = Dict{String,Any}()
     results["normals"] = run_problem_set(rng, normals, n_instantiations)
     println(results["normals"]["1"]["oracle"][2])
     println(results["normals"]["1"]["fk_truncated"][2])
     println(results["normals"]["1"]["pso"][2])
+    println(results["normals"]["1"]["take_all"][2])
 
     println(results["normals"]["1"]["oracle"][3])
     println(results["normals"]["1"]["fk_truncated"][3])
     println(results["normals"]["1"]["pso"][3])
+    println(results["normals"]["1"]["take_all"][3])
     # results["beta"] = run_problem_set(rng, beta, n_instantiations)
     # results["weibull"] = run_problem_set(rng, weibull, n_instantiations)
     # results["mixed"] = run_problem_set(rng, mixed, n_instantiations)
