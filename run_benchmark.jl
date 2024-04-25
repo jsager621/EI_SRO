@@ -112,10 +112,10 @@ function run_problem_set(rng, problem_set, n_instantiations)
         oracle_costs = zeros(Float64, n_instantiations)
         take_all_costs = zeros(Float64, n_instantiations)
 
-        oracle_n_no_remaining = 0
-        fk_truncated_n_no_remaining = 0
-        pso_n_no_remaining = 0
-        take_all_n_no_remaining = 0
+        oracle_v_remaining = zeros(Float64, n_instantiations)
+        fk_truncated_v_remaining = zeros(Float64, n_instantiations)
+        pso_v_remaining = zeros(Float64, n_instantiations)
+        take_all_v_remaining = zeros(Float64, n_instantiations)
 
         # NOTE: we abuse the fact here that resource subsets are shared by reference
         for i in 1:n_instantiations
@@ -127,24 +127,16 @@ function run_problem_set(rng, problem_set, n_instantiations)
             pso_costs[i] = total_cost(pso_solution.chosen_resources)
             take_all_costs[i] = total_cost(problem.resources)
 
-            if oracle_solution.v_remaining == 0
-                oracle_n_no_remaining += 1
-                take_all_n_no_remaining += 1
-            end
-
-            if remaining_target(fk_truncated_solution.chosen_resources, problem.target.v_target) == 0
-                fk_truncated_n_no_remaining += 1
-            end
-
-            if remaining_target(pso_solution.chosen_resources, problem.target.v_target) == 0
-                pso_n_no_remaining += 1
-            end
+            oracle_v_remaining[i] = oracle_solution.v_remaining
+            take_all_v_remaining = oracle_solution.v_remaining
+            fk_truncated_v_remaining = remaining_target(fk_truncated_solution.chosen_resources, problem.target.v_target)
+            pso_v_remaining = remaining_target(pso_solution.chosen_resources, problem.target.v_target)
         end
 
-        output[string(i)]["fk_truncated"] = (fk_truncated_costs, mean(fk_truncated_costs), fk_truncated_n_no_remaining)
-        output[string(i)]["pso"] = (pso_costs, mean(pso_costs), pso_n_no_remaining)
-        output[string(i)]["oracle"] = (oracle_costs, mean(oracle_costs), oracle_n_no_remaining)
-        output[string(i)]["take_all"] = (take_all_costs, mean(take_all_costs), take_all_n_no_remaining)
+        output[string(i)]["fk_truncated"] = (fk_truncated_costs, fk_truncated_v_remaining)
+        output[string(i)]["pso"] = (pso_costs, pso_v_remaining)
+        output[string(i)]["oracle"] = (oracle_costs, oracle_v_remaining)
+        output[string(i)]["take_all"] = (take_all_costs, take_all_v_remaining)
     end
 
     return output

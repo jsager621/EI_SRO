@@ -25,9 +25,9 @@ function oracle_solve(problem::SROProblem)::SROSolution
 
     if knapsack_target < 0
         return SROSolution(
-            Vector{SROResource}(),
-            Inf,
-            v_target
+            resources,
+            total_cost(resources),
+            v_target - max_value(resources)
         )
     end
 
