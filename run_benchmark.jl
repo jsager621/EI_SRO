@@ -9,6 +9,9 @@ c_selection = 100
 c_per_w = 10
 n_samples = 1000
 
+THIS_DIR = @__DIR__
+OUTDIR = THIS_DIR * "/outputs/logs"
+
 function random_cov_matrix(rng, size)
     mat = rand(rng, size, size)
     mat = 0.5 * (mat + mat')
@@ -143,32 +146,33 @@ function run_problem_set(rng, problem_set, n_instantiations)
 end
 
 function save_results(results, run_name)
-
+    fname = OUTDIR * "/" * run_name * ".json"
+    open(fname, "w") do f
+        json_data = JSON.json(results)
+        JSON.write(f, json_data)
+    end
 end
 
 function main()
-    @assert length(ARGS) > 1 "Missing command line args."
+    @assert length(ARGS) > 2 "Missing command line args."
     seed = parse(Int64, ARGS[1])
     run_name = ARGS[2]
+    gen_type = ARGS[3]
+
+    name_to_gen_function = Dict(
+        "n" => make_normal_problems,
+        "b" => make_beta_problems,
+        "w" => make_weibull_problems,
+        "m" => make_mixed_problems 
+    )
+
+    gen_func = name_to_gen_function[gen_type]
 
     rng = Xoshiro(seed)
     
     # normals, beta, weibull, mixed = make_problem_sets(rng, n_problems)
-    normals = make_normal_problems(rng, n_problems)
-
-    results = Dict{String, Any}()
-    results["normals"] = run_problem_set(rng, normals, n_instantiations)
-    println(results["normals"]["1"]["oracle"][2])
-    println(results["normals"]["1"]["fk_truncated"][2])
-    println(results["normals"]["1"]["pso"][2])
-
-    println(results["normals"]["1"]["oracle"][3])
-    println(results["normals"]["1"]["fk_truncated"][3])
-    println(results["normals"]["1"]["pso"][3])
-    # results["beta"] = run_problem_set(rng, beta, n_instantiations)
-    # results["weibull"] = run_problem_set(rng, weibull, n_instantiations)
-    # results["mixed"] = run_problem_set(rng, mixed, n_instantiations)
-
+    problems = gen_func(rng, n_problems)
+    results = run_problem_set(rng, problems, n_instantiations)
     save_results(results, run_name)
 
     return nothing
