@@ -2,7 +2,7 @@ using Copulas, Distributions, Random, FromFile, JSON, LinearAlgebra
 @from "src/sro/sro_problem_generation.jl" using SROProblems
 @from "src/sro/solvers/solver.jl" using SROSolvers
 
-n_problems = 1
+n_problems = 100
 n_instantiations = 1000
 n_resources = 10
 c_selection = 1
