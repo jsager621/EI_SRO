@@ -128,9 +128,9 @@ function run_problem_set(rng, problem_set, n_instantiations)
             take_all_costs[i] = total_cost(problem.resources)
 
             oracle_v_remaining[i] = oracle_solution.v_remaining
-            take_all_v_remaining = oracle_solution.v_remaining
-            fk_truncated_v_remaining = remaining_target(fk_truncated_solution.chosen_resources, problem.target.v_target)
-            pso_v_remaining = remaining_target(pso_solution.chosen_resources, problem.target.v_target)
+            take_all_v_remaining[i] = oracle_solution.v_remaining
+            fk_truncated_v_remaining[i] = remaining_target(fk_truncated_solution.chosen_resources, problem.target.v_target)
+            pso_v_remaining[i] = remaining_target(pso_solution.chosen_resources, problem.target.v_target)
         end
 
         output[string(i)]["fk_truncated"] = (fk_truncated_costs, fk_truncated_v_remaining)

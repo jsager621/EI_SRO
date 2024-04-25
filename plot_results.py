@@ -18,7 +18,7 @@ def plot_scenario_data(data, scenario_name):
     out_fname = os.path.join(plot_dir, scenario_name + ".png")
 
     result_costs = {}
-    result_n_remaining = {}
+    result_v_remaining = {}
 
     # find algo names
     first = data["1"]
@@ -29,7 +29,7 @@ def plot_scenario_data(data, scenario_name):
     for algo_name in result_costs.keys():
         for problem_i in data.keys():
             result_costs[algo_name] += data[problem_i][algo_name][0]
-            result_v_remaining[algo_name] += data[problem_i][algo_name][2]
+            result_v_remaining[algo_name] += data[problem_i][algo_name][1]
 
     # for k in result_n_remaining.keys():
     #     print(k)
@@ -38,15 +38,20 @@ def plot_scenario_data(data, scenario_name):
 
     # only add to the cost dataset if everyone got a valid solution
     # otherwise we get misleading total costs!
-    fitlered_costs = {}
+    filtered_costs = {}
+    data_length = 0
+
     for algo_name in result_costs.keys():
-        fitlered_costs[algo_name] = [
-            result_costs[algo_name][i] for i in range(len(result_costs[algo_name])) 
-            if all([result_v_remaining[a][i] == 0 for a in result_costs.keys()])
-            ]
+        filtered_costs[algo_name] = []
+        data_length = len(result_costs[algo_name])
+
+    for i in range(data_length):
+        if all([result_v_remaining[a][i] == 0 for a in result_v_remaining.keys()]):
+            for algo_name in result_costs.keys():
+                filtered_costs[algo_name].append(result_costs[algo_name][i])
 
     # seaborn.boxplot({"one": data, "two": data, "three": data}).set(xlabel="algo", ylabel="cost")
-    plot = sns.boxplot(result_costs)
+    plot = sns.boxplot(filtered_costs)
     plot.set(xlabel="algorithm", ylabel="result cost")
     fig = plot.get_figure()
     fig.savefig(out_fname)
