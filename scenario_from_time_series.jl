@@ -191,6 +191,7 @@ function make_load!(rng, n, output)
         "std_high" => LOAD_STD_HIGH,
         "min" => LOAD_MIN,
         "max" => LOAD_MAX,
+        "rolled_values" => rolled_values
     )
 end
 
