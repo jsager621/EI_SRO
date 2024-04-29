@@ -68,14 +68,17 @@ def run_sim(scenario_name, selected_gens=[]):
 
     for t in range(96):
         loads = [x[t] for x in load_values]
-        gens = [x[t] if i in selected_gens else 0 for i, x in enumerate(gen_values)]
+        raw_gens = [x[t] for x in gen_values]
 
-        grid.set_prosumer_loads_w(loads, gens)
+        sum_load.append(sum(loads))
+        sum_gen1.append(sum(raw_gens[0:4]))
+        sum_gen2.append(sum(raw_gens[4:8]))
+        sum_gen3.append(sum(raw_gens[8:12]))
+        sim_gens = [x[t] if i in selected_gens else 0 for i, x in enumerate(gen_values)]
+
+        grid.set_prosumer_loads_w(loads, sim_gens)
         grid.run_powerflow()
         trafo_load_percents.append(grid.grid.res_trafo.loading_percent[0])
-        sum_load.append(sum(loads))
-        sum_gen1.append(sum(gens[0:4]))
-        sum_gen2.append(sum(gens[4:8]))
-        sum_gen3.append(sum(gens[8:12]))
+        
 
     return trafo_load_percents, sum_load, sum_gen1, sum_gen2, sum_gen3
