@@ -38,14 +38,12 @@ class SimGrid():
                     self.grid.res_trafo.loc[i_trafo, "loading_percent"], 2
                 )
 
-    def set_prosumer_loads_kw(self, loads):
-        n_real_loads = len(self.grid.load) - 1
-        assert len(loads) == n_real_loads
-        for i in range(n_real_loads):
-            grid.grid.load.at[i, "p_mw"] = loads[i] / 1e3
-
-    def set_dummy_load_kw(self, load):
-        grid.grid.load.at[len(self.grid.load)-1, "p_mw"] = load / 1e3
+    def set_prosumer_loads_w(self, loads, gens):
+        n_loads = len(self.grid.load)
+        assert len(loads) == n_loads
+        assert len(gens) == n_loads
+        for i in range(n_loads):
+            self.grid.load.at[i, "p_mw"] = (loads[i] - gens[i]) / 1e6
 
     def run_powerflow(self):
         pp.runpp(
@@ -65,13 +63,12 @@ class SimGrid():
 
 if __name__ == "__main__":
     grid = SimGrid()
-
-    grid.set_dummy_load_kw(50)
-    grid.set_prosumer_loads_kw([10] * 12)
+    grid.set_prosumer_loads_w([11*1e3] * 13, [0] * 13)
     # for idx_l in range(len(self.grid.load)):
     #     self.grid.load.at[idx_l, "p_mw"] = 0
 
     grid.run_powerflow()
-    print(grid.grid.res_bus)
-    print(grid.grid.res_line)
-    print(grid.grid.res_trafo)
+    # print(grid.grid.res_bus)
+    # print(grid.grid.res_line)
+    # print(grid.grid.res_trafo)
+    print(grid.grid.res_trafo.loading_percent[0])

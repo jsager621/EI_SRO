@@ -1,14 +1,11 @@
 from src.grid_simulation.simulation import run_sim
+import seaborn as sns
 
 
 def main():
-    # read scenario files
-
     # sequentially set grid values and calculate power flow
-    # save relevant trafo load
-    # save trafo load as outputs (json, scenario file name field + output time series)
-    run_sim("test1")
-    pass
+    # returns relative trafo load for each time step
+    trafo_load_percents, sum_load, sum_gen1, sum_gen2, sum_gen3 = run_sim("test1")
 
 if __name__ == "__main__":
     main()
