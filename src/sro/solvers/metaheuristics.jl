@@ -1,13 +1,4 @@
-using Random, InvertedIndices
-
-function expected_cost(truncated_dist, target::SROTarget, c_selection, c_per_w, n_resources)::Float64
-    if 1.0 - cdf(truncated_dist, target.v_target) >= target.p_target
-        return c_selection * n_resources + mean(truncated_dist) * c_per_w
-    else
-        return Inf
-    end
-end
-
+using Random
 
 """
 Binary PSO algorithm as originally described by Kennedy and Eberhart (1997).
@@ -33,12 +24,16 @@ function bpso_truncated_normal_fit(rng, problem::SROProblem, n_samples::Int64; b
     
     resources = problem.resources
     target = problem.target
-    sklar_dist = get_gaussian_sklar_value_dist(problem)
+    value_sklar_dist = get_gaussian_sklar_value_dist(problem)
+    cost_sklar_dist = get_gaussian_sklar_cost_dist(problem)
     indices = collect(1:length(resources))
-    sample_data = rand(rng, sklar_dist, n_samples)
+    value_sample_data = rand(rng, value_sklar_dist, n_samples)
+    cost_sample_data = rand(rng, cost_sklar_dist, n_samples)
 
     uppers = [r.possible_values.upper for r in resources]
     lowers = [r.possible_values.lower for r in resources]
+    cost_lowers = [r.c_selection for r in resources]
+    cost_uppers = [r.possible_values.upper * r.c_per_w + r.c_selection for r in resources]
 
     n_particles = 10
     n_steps = 10
@@ -50,24 +45,19 @@ function bpso_truncated_normal_fit(rng, problem::SROProblem, n_samples::Int64; b
     assert_msg1 = "truncated normal solver requires all resources to be truncated with upper and lower bound"
     @assert all([r.possible_values isa Truncated for r in resources]) assert_msg1
 
-    assert_msg2 = "costs must be equal in all resources"
-    @assert all([r.c_selection == resources[1].c_selection for r in resources]) assert_msg2
-    @assert all([r.c_per_w == resources[1].c_per_w for r in resources]) assert_msg2
-
     c_selection = resources[1].c_selection
     c_per_w = resources[1].c_per_w
 
     function evaluation(subset::Vector{Int64}, target::SROTarget)::Float64
-        not_indices = indices[Not(subset)]
-        this_sample = sample_data[Not(not_indices), Not(not_indices)]
-        this_sum_sample = sum(this_sample, dims=1)
-        fit_dist = fit(Normal, this_sum_sample)
+        value_fit_dist, cost_fit_dist = fit_subset(subset, value_sample_data, cost_sample_data)
+        value_min = sum(lowers[subset])
+        value_max = sum(uppers[subset])
+        value_truncated_dist = truncated(value_fit_dist; lower=value_min, upper=value_max)
 
-        min = sum(lowers[subset])
-        max = sum(uppers[subset])
-        truncated_dist = truncated(fit_dist; lower=min, upper=max)
-
-        return expected_cost(truncated_dist, target, c_selection, c_per_w, length(subset))
+        cost_min = sum(cost_lowers[subset])
+        cost_max = sum(cost_uppers[subset])
+        cost_truncated_dist = truncated(cost_fit_dist; lower=cost_min, upper=cost_max)
+        return expected_cost(value_truncated_dist, cost_truncated_dist, target)
     end
 
     if sum([r.possible_values.upper for r in resources]) < target.v_target
@@ -146,9 +136,17 @@ function bpso_truncated_normal_fit(rng, problem::SROProblem, n_samples::Int64; b
 
     output_set = resources[global_best]
 
-    return SROSolution(
-            output_set,
-            total_cost(output_set),
-            remaining_target(output_set, target.v_target)
-    )
+    if buy_all
+        return SROSolution(
+                output_set,
+                total_cost(output_set),
+                remaining_target(output_set, target.v_target)
+                )
+    else
+        return SROSolution(
+                    output_set,
+                    target_cost(output_set, target.v_target),
+                    remaining_target(output_set, target.v_target)
+                )
+    end
 end

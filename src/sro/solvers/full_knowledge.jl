@@ -25,13 +25,6 @@ function fk_truncated_normal_fit(rng, problem::SROProblem, n_samples::Int64; buy
     assert_msg1 = "truncated normal solver requires all resources to be truncated with upper and lower bound"
     @assert all([r.possible_values isa Truncated for r in resources]) assert_msg1
 
-    assert_msg2 = "costs must be equal in all resources"
-    @assert all([r.c_selection == resources[1].c_selection for r in resources]) assert_msg2
-    @assert all([r.c_per_w == resources[1].c_per_w for r in resources]) assert_msg2
-
-    c_selection = resources[1].c_selection
-    c_per_w = resources[1].c_per_w
-
     uppers = [r.possible_values.upper for r in resources]
     lowers = [r.possible_values.lower for r in resources]
     cost_lowers = [r.c_selection for r in resources]
@@ -63,16 +56,7 @@ function fk_truncated_normal_fit(rng, problem::SROProblem, n_samples::Int64; buy
     thread_best_set = [Vector{Int64}() for _ in 1:Threads.nthreads()]
 
     Threads.@threads for subset in collect(powerset(indices, min_resources))
-        not_indices = indices[Not(subset)]
-        value_sample = value_sample_data[Not(not_indices), Not(not_indices)]
-        cost_sample = cost_sample_data[Not(not_indices), Not(not_indices)]
-        value_sum_sample = sum(value_sample, dims=1)
-        cost_sum_sample = sum(cost_sample, dims=1)
-
-
-
-        value_fit_dist = fit(Normal, value_sum_sample)
-        cost_fit_dist = fit(Normal, cost_sum_sample)
+        value_fit_dist, cost_fit_dist = fit_subset(subset, value_sample_data, cost_sample_data)
 
         value_min = sum(lowers[subset])
         value_max = sum(uppers[subset])
@@ -82,13 +66,11 @@ function fk_truncated_normal_fit(rng, problem::SROProblem, n_samples::Int64; buy
         cost_max = sum(cost_uppers[subset])
         cost_truncated_dist = truncated(cost_fit_dist; lower=cost_min, upper=cost_max)
 
-        # viability check
-        if 1.0 - cdf(value_truncated_dist, target.v_target) >= target.p_target
-            expected_sample_cost = mean(cost_truncated_dist)
-            if expected_sample_cost < thread_best_cost[Threads.threadid()]
-                thread_best_cost[Threads.threadid()] = expected_sample_cost
-                thread_best_set[Threads.threadid()] = subset
-            end
+        # evaluation
+        expected_sample_cost = expected_cost(value_truncated_dist, cost_truncated_dist, target)
+        if expected_sample_cost < thread_best_cost[Threads.threadid()]
+            thread_best_cost[Threads.threadid()] = expected_sample_cost
+            thread_best_set[Threads.threadid()] = subset
         end
     end
 
