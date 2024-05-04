@@ -34,3 +34,26 @@ function expected_cost(value_truncated_dist, cost_truncated_dist, target)::Float
         return Inf
     end
 end
+
+function target_cost(output_set, v_target)::Float64
+    if sum([r.rolled_value for r in output_set]) < v_target
+        return Inf
+    end
+
+    base_cost = sum(r.c_selection for r in output_set)
+    value_cost = 0.0
+    remaining_value = v_target
+    sorted_set = sort(output_set, by=r->r.c_per_w)
+
+    for r in sorted_set
+        if remaining_value <= r.rolled_value
+            value_cost += remaining_value * r.c_per_w
+            break
+        end
+
+        remaining_value -= r.rolled_value
+        value_cost += r.rolled_value * r.c_per_w
+    end
+
+    return base_cost + value_cost
+end

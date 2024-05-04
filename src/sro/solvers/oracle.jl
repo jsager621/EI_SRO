@@ -18,7 +18,7 @@ The oracle answers the question "what is the minimum cost set to provide at leas
 This is equivalent to the max knapsack problem "what is the maximum cost set pf at most v_target value?"
 assuming a solution exist (i.e. sum(v_r) >= v_target).
 """
-function oracle_solve(problem::SROProblem)::SROSolution
+function oracle_solve_buy_all(problem::SROProblem)::SROSolution
     resources = problem.resources
     v_target = problem.target.v_target
     knapsack_target = float(max_value(resources) - v_target)
@@ -66,4 +66,10 @@ function solve_knapsack_problem(;
     @assert is_solved_and_feasible(model)
     chosen_items = [i for i in 1:n if value(x[i]) > 0.5]
     return chosen_items
+end
+
+
+function oracle_solve_buy_necessary(problem::SROProblem)::SROSolution
+    # TODO implement me
+    # piecewise linear program
 end

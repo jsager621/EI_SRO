@@ -117,24 +117,42 @@ function sro_problem_stuff()
 end
 
 function oracle_solver(problem::SROProblem)
-    solution = oracle_solve(problem)
+    solution = oracle_solve_buy_all(problem)
     println(solution.cost)
 end
 
 function simple_solvers(problem::SROProblem)
-    solution = take_all(problem)
+    println("buy all")
+    solution = take_all(problem; buy_all=true)
+    println(solution.cost)
+    println(solution.v_remaining)
+
+    println("buy necessary")
+    solution = take_all(problem; buy_all=false)
     println(solution.cost)
     println(solution.v_remaining)
 end
 -
 function fk_solver(rng, problem::SROProblem)
+    println("buy all")
     solution = fk_truncated_normal_fit(rng, problem, 1000; buy_all=true)
+    println(solution.cost)
+    println(solution.v_remaining)
+
+    println("buy necessary")
+    solution = fk_truncated_normal_fit(rng, problem, 1000; buy_all=false)
     println(solution.cost)
     println(solution.v_remaining)
 end
 
 function fk_heuristic(rng, problem::SROProblem)
+    println("buy all")
     solution = bpso_truncated_normal_fit(rng, problem, 1000, buy_all=true)
+    println(solution.cost)
+    println(solution.v_remaining)
+
+    println("buy necessary")
+    solution = bpso_truncated_normal_fit(rng, problem, 1000, buy_all=false)
     println(solution.cost)
     println(solution.v_remaining)
 end
@@ -145,12 +163,12 @@ function main()
     problem = sro_problem_stuff()
     oracle_solver(problem)
     simple_solvers(problem)
-    for i in 1:10
+    for i in 1:1
         println("Fit solver run: ", i)
         @time fk_solver(rng, problem)
     end
 
-    for i in 1:10
+    for i in 1:1
         println("PSO solver run: ", i)
         @time fk_heuristic(rng, problem)
     end

@@ -45,9 +45,6 @@ function bpso_truncated_normal_fit(rng, problem::SROProblem, n_samples::Int64; b
     assert_msg1 = "truncated normal solver requires all resources to be truncated with upper and lower bound"
     @assert all([r.possible_values isa Truncated for r in resources]) assert_msg1
 
-    c_selection = resources[1].c_selection
-    c_per_w = resources[1].c_per_w
-
     function evaluation(subset::Vector{Int64}, target::SROTarget)::Float64
         value_fit_dist, cost_fit_dist = fit_subset(subset, value_sample_data, cost_sample_data)
         value_min = sum(lowers[subset])
