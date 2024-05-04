@@ -97,7 +97,7 @@ function sro_problem_stuff()
     cov_m = COV_12x12_5_2_5
     resources = Vector{SROResource}()
     for i in 1:size(cov_m, 1)
-        new_resource = SROResource(truncated(Normal(10, 5); lower=0, upper=20), 100, 10, 0)
+        new_resource = SROResource(truncated(Normal(10, 5); lower=0, upper=20), 100, 10)
         push!(resources, new_resource)
     end
 
@@ -128,13 +128,13 @@ function simple_solvers(problem::SROProblem)
 end
 -
 function fk_solver(rng, problem::SROProblem)
-    solution = fk_truncated_normal_fit(rng, problem, 1000)
+    solution = fk_truncated_normal_fit(rng, problem, 1000; buy_all=true)
     println(solution.total_cost)
     println(solution.v_remaining)
 end
 
 function fk_heuristic(rng, problem::SROProblem)
-    solution = bpso_truncated_normal_fit(rng, problem, 1000)
+    solution = bpso_truncated_normal_fit(rng, problem, 1000, buy_all=true)
     println(solution.total_cost)
     println(solution.v_remaining)
 end

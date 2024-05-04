@@ -28,12 +28,12 @@ c2 - 1.43
 w - 0.69
 v_max - 4.0
 """
-function bpso_truncated_normal_fit(rng, problem::SROProblem, n_samples::Int64)::SROSolution
+function bpso_truncated_normal_fit(rng, problem::SROProblem, n_samples::Int64; buy_all::Bool)::SROSolution
     sigmoid(z::Real) = one(z) / (one(z) + exp(-z))
     
     resources = problem.resources
     target = problem.target
-    sklar_dist = get_gaussian_sklar_dist(problem)
+    sklar_dist = get_gaussian_sklar_value_dist(problem)
     indices = collect(1:length(resources))
     sample_data = rand(rng, sklar_dist, n_samples)
 

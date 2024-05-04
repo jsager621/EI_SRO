@@ -5,7 +5,11 @@ using Distributions
 using Copulas
 using Random
 
-export SROResource, SROTarget, SROProblem, SROSolution, instantiate_problem!, best_cost_from_selection, get_gaussian_sklar_dist
+export SROResource, SROTarget, SROProblem, 
+       SROSolution, instantiate_problem!, 
+       best_cost_from_selection, 
+       get_gaussian_sklar_value_dist,
+       get_gaussian_sklar_cost_dist
 
 
 """
@@ -19,9 +23,31 @@ rolled_value - actual value achieved when instantiating the problem
 """
 mutable struct SROResource
     possible_values::ContinuousUnivariateDistribution
+    possible_costs::ContinuousUnivariateDistribution
     c_selection::Float64
     c_per_w::Float64
     rolled_value::Float64 # v in w
+
+    function SROResource(possible_values, c_selection, c_per_w)
+        v_low = possible_values.lower
+        v_up = possible_values.upper
+        c_low = c_selection
+        c_up = c_selection + c_per_w * v_up
+
+        v_range = v_up - v_low
+        c_range = c_up - c_low
+        scale_factor = c_range/v_range
+
+        possible_costs = possible_values * scale_factor + c_low - v_low * scale_factor
+
+        return new(
+            possible_values,
+            possible_costs,
+            c_selection,
+            c_per_w,
+            0.0
+        )
+    end
 end
 
 struct SROTarget
@@ -53,7 +79,7 @@ distributions and covariance matrix.
 If rolled_value is already set for a resource, this function will override it.
 """
 function instantiate_problem!(problem::SROProblem, rng::Xoshiro=Xoshiro())::Nothing
-    d = get_gaussian_sklar_dist(problem)
+    d = get_gaussian_sklar_value_dist(problem)
     rolled_values = rand(rng, d,1)
 
     for i in eachindex(rolled_values)
@@ -63,11 +89,20 @@ function instantiate_problem!(problem::SROProblem, rng::Xoshiro=Xoshiro())::Noth
     return nothing
 end
 
-function get_gaussian_sklar_dist(problem::SROProblem)::SklarDist
+function get_gaussian_sklar_value_dist(problem::SROProblem)::SklarDist
     cov_matrix = problem.cov_matrix
     resources = problem.resources
 
     marginals = tuple([r.possible_values for r in resources]...)
+    c = GaussianCopula(cov_matrix)
+    return SklarDist(c,marginals)
+end
+
+function get_gaussian_sklar_cost_dist(problem::SROProblem)::SklarDist
+    cov_matrix = problem.cov_matrix
+    resources = problem.resources
+
+    marginals = tuple([r.possible_costs for r in resources]...)
     c = GaussianCopula(cov_matrix)
     return SklarDist(c,marginals)
 end
