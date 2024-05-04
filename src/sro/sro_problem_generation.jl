@@ -57,7 +57,7 @@ end
 
 struct SROSolution
     chosen_resources::Vector{SROResource}
-    total_cost::Float64
+    cost::Float64
     v_remaining::Float64
 end
 

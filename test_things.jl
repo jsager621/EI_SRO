@@ -118,24 +118,24 @@ end
 
 function oracle_solver(problem::SROProblem)
     solution = oracle_solve(problem)
-    println(solution.total_cost)
+    println(solution.cost)
 end
 
 function simple_solvers(problem::SROProblem)
     solution = take_all(problem)
-    println(solution.total_cost)
+    println(solution.cost)
     println(solution.v_remaining)
 end
 -
 function fk_solver(rng, problem::SROProblem)
     solution = fk_truncated_normal_fit(rng, problem, 1000; buy_all=true)
-    println(solution.total_cost)
+    println(solution.cost)
     println(solution.v_remaining)
 end
 
 function fk_heuristic(rng, problem::SROProblem)
     solution = bpso_truncated_normal_fit(rng, problem, 1000, buy_all=true)
-    println(solution.total_cost)
+    println(solution.cost)
     println(solution.v_remaining)
 end
 
