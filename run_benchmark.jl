@@ -2,12 +2,15 @@ using Copulas, Distributions, Random, FromFile, JSON, LinearAlgebra
 @from "src/sro/sro_problem_generation.jl" using SROProblems
 @from "src/sro/solvers/solver.jl" using SROSolvers
 
-n_problems = 100
-n_instantiations = 1000
+n_problems = 1
+n_instantiations = 1
 n_resources = 10
-c_selection = 1
-c_per_w = 10
 n_samples = 1000
+
+c_selection_lower = 5
+c_selection_upper = 10
+c_per_w_lower = 2
+c_per_w_upper = 5
 
 THIS_DIR = @__DIR__
 OUTDIR = THIS_DIR * "/outputs/logs"
@@ -46,6 +49,9 @@ function make_normal_problems(rng, n_problems)
     resource_upper = 250.0
 
     for i in 1:n_problems
+        c_selection = rand(rng) * (c_selection_upper - c_selection_lower) + c_selection_lower
+        c_per_w = rand(rng) * (c_per_w_upper - c_per_w_lower) + c_per_w_lower
+
         offset = (i - 1) * n_resources
         problem_resources = Vector{SROResource}()
 
@@ -55,7 +61,6 @@ function make_normal_problems(rng, n_problems)
                 resource_dist,
                 c_selection,
                 c_per_w,
-                0.0
             )
             push!(problem_resources, new_resource)
         end
@@ -97,15 +102,15 @@ function make_problem_sets(rng, n_problems)
     return (normals, beta, weibull, mixed)
 end
 
-function run_problem_set(rng, problem_set, n_instantiations)
+function run_buy_all_problem_set(rng, problem_set, n_instantiations)
     output = Dict{String,Any}()
 
     for (i, problem) in enumerate(problem_set)
         output[string(i)] = Dict{String,Any}()
 
         instantiate_problem!(problem, rng)
-        fk_truncated_solution = fk_truncated_normal_fit(rng, problem, n_samples)
-        pso_solution = bpso_truncated_normal_fit(rng, problem, n_samples)
+        fk_truncated_solution = fk_truncated_normal_fit(rng, problem, n_samples; buy_all=true)
+        pso_solution = bpso_truncated_normal_fit(rng, problem, n_samples; buy_all=true)
 
         fk_truncated_costs = zeros(Float64, n_instantiations)
         pso_costs = zeros(Float64, n_instantiations)
@@ -120,12 +125,59 @@ function run_problem_set(rng, problem_set, n_instantiations)
         # NOTE: we abuse the fact here that resource subsets are shared by reference
         for i in 1:n_instantiations
             instantiate_problem!(problem, rng)
-            oracle_solution = oracle_solve(problem)
+            oracle_solution = oracle_solve_buy_all(problem)
 
-            oracle_costs[i] = oracle_solution.total_cost
+            oracle_costs[i] = oracle_solution.cost
             fk_truncated_costs[i] = total_cost(fk_truncated_solution.chosen_resources)
             pso_costs[i] = total_cost(pso_solution.chosen_resources)
             take_all_costs[i] = total_cost(problem.resources)
+
+            oracle_v_remaining[i] = oracle_solution.v_remaining
+            take_all_v_remaining[i] = oracle_solution.v_remaining
+            fk_truncated_v_remaining[i] = remaining_target(fk_truncated_solution.chosen_resources, problem.target.v_target)
+            pso_v_remaining[i] = remaining_target(pso_solution.chosen_resources, problem.target.v_target)
+        end
+
+        output[string(i)]["fk_truncated"] = (fk_truncated_costs, fk_truncated_v_remaining)
+        output[string(i)]["pso"] = (pso_costs, pso_v_remaining)
+        output[string(i)]["oracle"] = (oracle_costs, oracle_v_remaining)
+        output[string(i)]["take_all"] = (take_all_costs, take_all_v_remaining)
+    end
+
+    return output
+end
+
+function run_buy_necessary_problem_set(rng, problem_set, n_instantiations)
+    output = Dict{String,Any}()
+
+    for (i, problem) in enumerate(problem_set)
+        v_target = problem.target.v_target
+
+        output[string(i)] = Dict{String,Any}()
+
+        instantiate_problem!(problem, rng)
+        fk_truncated_solution = fk_truncated_normal_fit(rng, problem, n_samples; buy_all=true)
+        pso_solution = bpso_truncated_normal_fit(rng, problem, n_samples; buy_all=true)
+
+        fk_truncated_costs = zeros(Float64, n_instantiations)
+        pso_costs = zeros(Float64, n_instantiations)
+        oracle_costs = zeros(Float64, n_instantiations)
+        take_all_costs = zeros(Float64, n_instantiations)
+
+        oracle_v_remaining = zeros(Float64, n_instantiations)
+        fk_truncated_v_remaining = zeros(Float64, n_instantiations)
+        pso_v_remaining = zeros(Float64, n_instantiations)
+        take_all_v_remaining = zeros(Float64, n_instantiations)
+
+        # NOTE: we abuse the fact here that resource subsets are shared by reference
+        for i in 1:n_instantiations
+            instantiate_problem!(problem, rng)
+            oracle_solution = oracle_solve_buy_necessary(problem)
+
+            oracle_costs[i] = oracle_solution.cost
+            fk_truncated_costs[i] = target_cost(fk_truncated_solution.chosen_resources, v_target)
+            pso_costs[i] = target_cost(pso_solution.chosen_resources, v_target)
+            take_all_costs[i] = target_cost(problem.resources, v_target)
 
             oracle_v_remaining[i] = oracle_solution.v_remaining
             take_all_v_remaining[i] = oracle_solution.v_remaining
@@ -151,10 +203,11 @@ function save_results(results, run_name)
 end
 
 function main()
-    @assert length(ARGS) > 2 "Missing command line args."
+    @assert length(ARGS) > 3 "Missing command line args."
     seed = parse(Int64, ARGS[1])
     run_name = ARGS[2]
     gen_type = ARGS[3]
+    buy_all = Bool(parse(Int64, ARGS[4]))
 
     name_to_gen_function = Dict(
         "n" => make_normal_problems,
@@ -169,7 +222,12 @@ function main()
 
     # normals, beta, weibull, mixed = make_problem_sets(rng, n_problems)
     problems = gen_func(rng, n_problems)
-    results = run_problem_set(rng, problems, n_instantiations)
+
+    if buy_all
+        results = run_buy_all_problem_set(rng, problems, n_instantiations)
+    else
+        results = run_buy_necessary_problem_set(rng, problems, n_instantiations)
+    end
     save_results(results, run_name)
 
     return nothing
