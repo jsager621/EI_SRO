@@ -7,8 +7,8 @@ n_instantiations = 100
 n_resources = 10
 n_samples = 1000
 
-c_selection_lower = 5
-c_selection_upper = 10
+c_selection_lower = 500
+c_selection_upper = 1000
 c_per_w_lower = 2
 c_per_w_upper = 5
 

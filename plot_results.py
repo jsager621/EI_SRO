@@ -2,6 +2,7 @@ import json
 import seaborn as sns
 import os
 import sys
+from pathlib import Path
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
 scenario_dir = os.path.join(this_dir, "outputs", "logs")
@@ -55,6 +56,7 @@ def plot_scenario_data(data, scenario_name):
     plot.set(xlabel="algorithm", ylabel="result cost")
     fig = plot.get_figure()
     fig.savefig(out_fname)
+    fig.clf()
 
 
 
@@ -64,8 +66,16 @@ def main():
         return
 
     scenario_name = sys.argv[1]
-    data = read_scenario(scenario_name)
-    plot_scenario_data(data, scenario_name)
+    if scenario_name == "all":
+        files = os.listdir(scenario_dir)
+        for f in files:
+            name = Path(f).stem
+            data = read_scenario(name)
+            plot_scenario_data(data, name)
+
+    else:
+        data = read_scenario(scenario_name)
+        plot_scenario_data(data, scenario_name)
 
 if __name__ == "__main__":
     main()
