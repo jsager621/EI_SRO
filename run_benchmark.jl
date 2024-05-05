@@ -3,7 +3,7 @@ using Copulas, Distributions, Random, FromFile, JSON, LinearAlgebra
 @from "src/sro/solvers/solver.jl" using SROSolvers
 
 n_problems = 100
-n_instantiations = 1000
+n_instantiations = 100
 n_resources = 10
 n_samples = 1000
 
@@ -211,7 +211,7 @@ end
 function run_buy_all_problem_set(rng, problem_set, n_instantiations)
     output = Dict{String,Any}()
 
-    for (i, problem) in enumerate(problem_set)
+    Threads.@threads for (i, problem) in collect(enumerate(problem_set))
         output[string(i)] = Dict{String,Any}()
 
         instantiate_problem!(problem, rng)
@@ -256,7 +256,7 @@ end
 function run_buy_necessary_problem_set(rng, problem_set, n_instantiations)
     output = Dict{String,Any}()
 
-    for (i, problem) in enumerate(problem_set)
+    Threads.@threads for (i, problem) in collect(enumerate(problem_set))
         v_target = problem.target.v_target
 
         output[string(i)] = Dict{String,Any}()
