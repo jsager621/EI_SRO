@@ -2,8 +2,8 @@ using Copulas, Distributions, Random, FromFile, JSON, LinearAlgebra
 @from "src/sro/sro_problem_generation.jl" using SROProblems
 @from "src/sro/solvers/solver.jl" using SROSolvers
 
-n_problems = 1
-n_instantiations = 1
+n_problems = 100
+n_instantiations = 1000
 n_resources = 10
 n_samples = 1000
 
@@ -80,11 +80,117 @@ function make_normal_problems(rng, n_problems)
 end
 
 function make_beta_problems(rng, n_problems)
+    problems = Vector{SROProblem}()
 
+    total_resources = n_problems * n_resources
+
+    mean_lower = 50.0
+    mean_upper = 150.0
+    mean_mean = 100.0
+    mean_std = 60.0
+    mean_dist = truncated(Normal(mean_mean, mean_std); lower=mean_lower, upper=mean_upper)
+    resource_means = vec(rand(rng, mean_dist, total_resources))
+
+    v_target = n_resources * mean_mean / 2
+    p_target = 0.8
+    target = SROTarget(p_target, v_target)
+
+    resource_lower = 0.0
+    resource_upper = 250.0
+
+    for i in 1:n_problems
+        c_selection = rand(rng) * (c_selection_upper - c_selection_lower) + c_selection_lower
+        c_per_w = rand(rng) * (c_per_w_upper - c_per_w_lower) + c_per_w_lower
+
+        offset = (i - 1) * n_resources
+        problem_resources = Vector{SROResource}()
+
+        for j in 1:n_resources
+
+            # make a beta distribution shifted to the expected mean and truncated
+            beta_dist = Beta(2,4)
+            # shift to desired mean
+            shifted_dist = beta_dist * resource_means[offset+j] / mean(beta_dist)
+            # truncate
+            resource_dist = truncated(shifted_dist; lower=resource_lower, upper=resource_upper)
+
+            new_resource = SROResource(
+                resource_dist,
+                c_selection,
+                c_per_w,
+            )
+            push!(problem_resources, new_resource)
+        end
+
+        cov_matrix = random_cov_matrix(rng, n_resources)
+
+        new_problem = SROProblem(
+            problem_resources,
+            cov_matrix,
+            target
+        )
+
+        push!(problems, new_problem)
+    end
+
+    return problems
 end
 
 function make_weibull_problems(rng, n_problems)
+    problems = Vector{SROProblem}()
 
+    total_resources = n_problems * n_resources
+
+    mean_lower = 50.0
+    mean_upper = 150.0
+    mean_mean = 100.0
+    mean_std = 60.0
+    mean_dist = truncated(Normal(mean_mean, mean_std); lower=mean_lower, upper=mean_upper)
+    resource_means = vec(rand(rng, mean_dist, total_resources))
+
+    v_target = n_resources * mean_mean / 2
+    p_target = 0.8
+    target = SROTarget(p_target, v_target)
+
+    resource_lower = 0.0
+    resource_upper = 250.0
+
+    for i in 1:n_problems
+        c_selection = rand(rng) * (c_selection_upper - c_selection_lower) + c_selection_lower
+        c_per_w = rand(rng) * (c_per_w_upper - c_per_w_lower) + c_per_w_lower
+
+        offset = (i - 1) * n_resources
+        problem_resources = Vector{SROResource}()
+
+        for j in 1:n_resources
+
+            # make a beta distribution shifted to the expected mean and truncated
+            weibull_dist = Weibull(1.5, 1)
+            # shift to desired mean
+            shifted_dist = weibull_dist * resource_means[offset+j] / mean(weibull_dist)
+            # truncate
+            resource_dist = truncated(shifted_dist; lower=resource_lower, upper=resource_upper)
+            
+            new_resource = SROResource(
+                resource_dist,
+                c_selection,
+                c_per_w,
+            )
+            push!(problem_resources, new_resource)
+        end
+
+        cov_matrix = random_cov_matrix(rng, n_resources)
+
+        new_problem = SROProblem(
+            problem_resources,
+            cov_matrix,
+            target
+        )
+
+        push!(problems, new_problem)
+    end
+
+    return problems
 end
 
 function make_mixed_problems(rng, n_problems)
