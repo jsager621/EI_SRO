@@ -117,7 +117,12 @@ function sro_problem_stuff()
 end
 
 function oracle_solver(problem::SROProblem)
-    solution = oracle_solve_buy_all(problem)
+    @time solution = oracle_solve_buy_all(problem)
+    println("buy all oracle")
+    println(solution.cost)
+
+    @time solution = oracle_solve_buy_necessary(problem)
+    println("buy necessary oracle")
     println(solution.cost)
 end
 

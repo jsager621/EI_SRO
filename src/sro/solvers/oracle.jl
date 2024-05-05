@@ -70,6 +70,47 @@ end
 
 
 function oracle_solve_buy_necessary(problem::SROProblem)::SROSolution
-    # TODO implement me
-    # piecewise linear program
+    resources = problem.resources
+    target = problem.target
+
+    rolled_values = [r.rolled_value for r in resources]
+    rv_cum_sum = cumsum(sort(rolled_values, rev=true))
+
+    if rv_cum_sum[end] < target.v_target
+        # no feasible solution exists
+        return SROSolution(
+                Vector{SROResource}(),
+                Inf,
+                target.v_target
+        )
+    end
+
+    min_resources = 1
+    for i in eachindex(rv_cum_sum)
+        min_resources = i
+        if rv_cum_sum[i] > target.v_target
+            break
+        end
+    end
+
+    thread_best_cost = [Inf for _ in 1:Threads.nthreads()]
+    thread_best_set = [Vector{SROResource}() for _ in 1:Threads.nthreads()]
+
+    Threads.@threads for subset in collect(powerset(resources, min_resources))
+        subset_cost = target_cost(subset, target.v_target)
+        if subset_cost < thread_best_cost[Threads.threadid()]
+            thread_best_cost[Threads.threadid()] = subset_cost
+            thread_best_set[Threads.threadid()] = subset
+        end
+    end
+
+    best_thread_index = findmin(thread_best_cost)[2]
+    output_set = thread_best_set[best_thread_index]
+    output_cost = thread_best_cost[best_thread_index]
+
+    return SROSolution(
+                    output_set,
+                    output_cost,
+                    0.0
+            )
 end
