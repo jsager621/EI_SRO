@@ -53,7 +53,7 @@ def plot_scenario_data(data, scenario_name):
 
     # seaborn.boxplot({"one": data, "two": data, "three": data}).set(xlabel="algo", ylabel="cost")
     plot = sns.boxplot(filtered_costs)
-    plot.set(xlabel="algorithm", ylabel="result cost")
+    plot.set(xlabel="algorithm", ylabel="cumulative result costs")
     fig = plot.get_figure()
     fig.savefig(out_fname)
     fig.clf()
