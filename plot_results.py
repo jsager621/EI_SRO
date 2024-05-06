@@ -54,11 +54,42 @@ def plot_scenario_data(data, scenario_name):
     # seaborn.boxplot({"one": data, "two": data, "three": data}).set(xlabel="algo", ylabel="cost")
     plot = sns.boxplot(filtered_costs)
     plot.set(xlabel="algorithm", ylabel="cumulative result costs")
+    plot.set(title=scenario_name[:-2])
     fig = plot.get_figure()
     fig.savefig(out_fname)
     fig.clf()
 
 
+def print_success_rates():
+    files = os.listdir(scenario_dir)
+    scenarios = []
+    for f in files:
+        if "runtime" in f:
+            continue
+        name = Path(f).stem
+        data = read_scenario(name)
+        scenarios.append(data)
+
+    algo_counters = {
+        "bpso_approx": 0,
+        "full_approx": 0
+    }
+
+    for scenario in scenarios:
+        for i_problem in scenario.keys():
+            bpso_data = scenario[i_problem]["bpso_approx"]
+            full_data = scenario[i_problem]["full_approx"]
+            # oracle_data = scenario[i_problem]["oracle"]
+
+            bpso_successes = len([x for x in bpso_data[1] if x == 0])
+            full_successes = len([x for x in full_data[1] if x == 0])
+
+            algo_counters["bpso_approx"] += bpso_successes
+            algo_counters["full_approx"] += full_successes
+
+    print(algo_counters)
+    print("bpso_approx: ", algo_counters["bpso_approx"] / 80000)
+    print("full_approx: ", algo_counters["full_approx"] / 80000)
 
 def main():
     if len(sys.argv) < 2:
@@ -69,9 +100,14 @@ def main():
     if scenario_name == "all":
         files = os.listdir(scenario_dir)
         for f in files:
+            if "runtime" in f:
+                continue
             name = Path(f).stem
             data = read_scenario(name)
             plot_scenario_data(data, name)
+
+    elif scenario_name == "print":
+        print_success_rates()
 
     else:
         data = read_scenario(scenario_name)
