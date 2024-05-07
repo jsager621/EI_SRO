@@ -27,6 +27,7 @@ mutable struct SROResource
     c_selection::Float64
     c_per_w::Float64
     rolled_value::Float64 # v in w
+    name::String
 
     function SROResource(possible_values, c_selection, c_per_w)
         v_low = possible_values.lower
@@ -45,7 +46,30 @@ mutable struct SROResource
             possible_costs,
             c_selection,
             c_per_w,
-            0.0
+            0.0,
+            ""
+        )
+    end
+
+    function SROResource(possible_values, c_selection, c_per_w, name)
+        v_low = possible_values.lower
+        v_up = possible_values.upper
+        c_low = c_selection
+        c_up = c_selection + c_per_w * v_up
+
+        v_range = v_up - v_low
+        c_range = c_up - c_low
+        scale_factor = c_range/v_range
+
+        possible_costs = possible_values * scale_factor + c_low - v_low * scale_factor
+
+        return new(
+            possible_values,
+            possible_costs,
+            c_selection,
+            c_per_w,
+            0.0,
+            name
         )
     end
 end
