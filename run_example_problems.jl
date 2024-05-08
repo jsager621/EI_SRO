@@ -46,8 +46,8 @@ function main()
     BA_STD = 0.05
     RESOURCE_SIZES = [6000, 7000, 8000, 9000]
 
-    pv_levels = [0.1, 0.9, 0.9, 0.1]
-    wi_levels = [0.9, 0.8, 0.2, 0.2]
+    pv_levels = [0.1, 0.93, 0.77, 0.1]
+    wi_levels = [0.9, 0.7, 0.35, 0.1]
     ba_levels = [0.8, 0.8, 0.8, 0.8]
 
 
