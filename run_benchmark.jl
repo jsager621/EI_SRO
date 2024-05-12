@@ -2,6 +2,8 @@ using Copulas, Distributions, Random, FromFile, JSON, LinearAlgebra
 @from "src/sro/sro_problem_generation.jl" using SROProblems
 @from "src/sro/solvers/solver.jl" using SROSolvers
 
+P_TARGET = 0.8
+
 n_problems = 100
 n_instantiations = 100
 n_resources = 10
@@ -42,7 +44,7 @@ function make_normal_problems(rng, n_problems)
     resource_stds = vec(rand(rng, std_dist, total_resources))
 
     v_target = n_resources * mean_mean / 2
-    p_target = 0.8
+    p_target = P_TARGET
     target = SROTarget(p_target, v_target)
 
     resource_lower = 0.0
@@ -92,7 +94,7 @@ function make_beta_problems(rng, n_problems)
     resource_means = vec(rand(rng, mean_dist, total_resources))
 
     v_target = n_resources * mean_mean / 2
-    p_target = 0.8
+    p_target = P_TARGET
     target = SROTarget(p_target, v_target)
 
     resource_lower = 0.0
@@ -149,7 +151,7 @@ function make_weibull_problems(rng, n_problems)
     resource_means = vec(rand(rng, mean_dist, total_resources))
 
     v_target = n_resources * mean_mean / 2
-    p_target = 0.8
+    p_target = P_TARGET
     target = SROTarget(p_target, v_target)
 
     resource_lower = 0.0
@@ -300,8 +302,14 @@ function run_buy_necessary_problem_set(rng, problem_set, n_instantiations)
     return output
 end
 
-function save_results(results, run_name)
-    fname = OUTDIR * "/" * run_name * ".json"
+function save_results(results, dir_name, run_name)
+    run_dir = OUTDIR * "/" * dir_name * "/"
+
+    if !isdir(run_dir)
+        mkdir(run_dir)
+    end
+
+    fname = run_dir * run_name * ".json"
     open(fname, "w") do f
         json_data = JSON.json(results)
         JSON.write(f, json_data)
@@ -309,11 +317,14 @@ function save_results(results, run_name)
 end
 
 function main()
-    @assert length(ARGS) > 3 "Missing command line args."
+    @assert length(ARGS) > 5 "Missing command line args."
     seed = parse(Int64, ARGS[1])
     run_name = ARGS[2]
     gen_type = ARGS[3]
     buy_all = Bool(parse(Int64, ARGS[4]))
+    dir_name = ARGS[5]
+
+    global P_TARGET = parse(Float64, ARGS[6])
 
     name_to_gen_function = Dict(
         "n" => make_normal_problems,
@@ -334,7 +345,7 @@ function main()
     else
         results = run_buy_necessary_problem_set(rng, problems, n_instantiations)
     end
-    save_results(results, run_name)
+    save_results(results, dir_name, run_name)
 
     return nothing
 end
