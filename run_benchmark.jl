@@ -2,20 +2,21 @@ using Copulas, Distributions, Random, FromFile, JSON, LinearAlgebra
 @from "src/sro/sro_problem_generation.jl" using SROProblems
 @from "src/sro/solvers/solver.jl" using SROSolvers
 
-P_TARGET = 0.8
+const P_TARGET::Float64 = 0.8
 
-n_problems = 100
-n_instantiations = 100
-n_resources = 10
-n_samples = 1000
+const n_problems::Int64 = 100
+const n_instantiations::Int64 = 100
+const n_resources::Int64 = 10
+const n_samples::Int64 = 1000
 
-c_selection_lower = 500
-c_selection_upper = 1000
-c_per_w_lower = 2
-c_per_w_upper = 5
+const c_selection_lower::Int64 = 500
+const c_selection_upper::Int64 = 1000
+const c_per_w_lower::Int64 = 2
+const c_per_w_upper::Int64 = 5
 
-THIS_DIR = @__DIR__
-OUTDIR = THIS_DIR * "/outputs/logs"
+const THIS_DIR::String = @__DIR__
+const OUTDIR::String = THIS_DIR * "/outputs/logs"
+
 
 function random_cov_matrix(rng, size)
     mat = rand(rng, size, size)
@@ -351,4 +352,4 @@ function main()
 end
 
 
-main()
+@time main()

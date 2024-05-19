@@ -5,18 +5,18 @@ import sys
 from pathlib import Path
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
-scenario_dir = os.path.join(this_dir, "outputs", "logs")
+log_dir = os.path.join(this_dir, "outputs", "logs")
 plot_dir = os.path.join(this_dir, "outputs", "plots")
 
-def read_scenario(scenario_name):
+def read_scenario(scenario_dir, scenario_name):
     fname = os.path.join(scenario_dir, scenario_name + ".json", )
 
     with open(fname, "r") as f:
         data = json.load(f)
         return data
 
-def plot_scenario_data(data, scenario_name):
-    out_fname = os.path.join(plot_dir, scenario_name + ".png")
+def plot_scenario_data(data, scenario_dir_name, scenario_name):
+    out_fname = os.path.join(plot_dir, scenario_dir_name + "-" + scenario_name + ".png")
 
     result_costs = {}
     result_v_remaining = {}
@@ -60,58 +60,61 @@ def plot_scenario_data(data, scenario_name):
     fig.clf()
 
 
-def print_success_rates():
+def print_success_rates(scenario_dir):
     files = os.listdir(scenario_dir)
     scenarios = []
     for f in files:
         if "runtime" in f:
             continue
         name = Path(f).stem
-        data = read_scenario(name)
+        data = read_scenario(scenario_dir, name)
         scenarios.append(data)
 
     algo_counters = {
-        "bpso_approx": 0,
-        "full_approx": 0
+        "pso": 0,
+        "fk_truncated": 0
     }
 
     for scenario in scenarios:
         for i_problem in scenario.keys():
-            bpso_data = scenario[i_problem]["bpso_approx"]
-            full_data = scenario[i_problem]["full_approx"]
+            bpso_data = scenario[i_problem]["pso"]
+            full_data = scenario[i_problem]["fk_truncated"]
             # oracle_data = scenario[i_problem]["oracle"]
 
             bpso_successes = len([x for x in bpso_data[1] if x == 0])
             full_successes = len([x for x in full_data[1] if x == 0])
 
-            algo_counters["bpso_approx"] += bpso_successes
-            algo_counters["full_approx"] += full_successes
+            algo_counters["pso"] += bpso_successes
+            algo_counters["fk_truncated"] += full_successes
 
     print(algo_counters)
-    print("bpso_approx: ", algo_counters["bpso_approx"] / 80000)
-    print("full_approx: ", algo_counters["full_approx"] / 80000)
+    print("pso: ", algo_counters["pso"] / 80000)
+    print("fk_truncated: ", algo_counters["fk_truncated"] / 80000)
 
 def main():
-    if len(sys.argv) < 2:
-        print("Please specify scenario name as command line arg.")
+    if len(sys.argv) < 3:
+        print("Please specify scenario dir and name name as command line args.")
         return
 
-    scenario_name = sys.argv[1]
+    scenario_dir_name = sys.argv[1]
+    scenario_name = sys.argv[2]
+    scenario_dir = os.path.join(log_dir, scenario_dir_name)
+
     if scenario_name == "all":
         files = os.listdir(scenario_dir)
         for f in files:
             if "runtime" in f:
                 continue
             name = Path(f).stem
-            data = read_scenario(name)
-            plot_scenario_data(data, name)
+            data = read_scenario(scenario_dir, name)
+            plot_scenario_data(data, scenario_dir_name, name)
 
     elif scenario_name == "print":
-        print_success_rates()
+        print_success_rates(scenario_dir)
 
     else:
-        data = read_scenario(scenario_name)
-        plot_scenario_data(data, scenario_name)
+        data = read_scenario(scenario_dir, scenario_name)
+        plot_scenario_data(data, scenario_dir_name, scenario_name)
 
 if __name__ == "__main__":
     main()
