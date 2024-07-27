@@ -16,7 +16,10 @@ def read_scenario(scenario_dir, scenario_name):
         return data
 
 def plot_scenario_data(data, scenario_dir_name, scenario_name):
-    out_fname = os.path.join(plot_dir, scenario_dir_name + "-" + scenario_name + ".png")
+    out_dir = os.path.join(plot_dir, scenario_dir_name)
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
+    out_fname = os.path.join(out_dir, scenario_name + ".png")
 
     result_costs = {}
     result_v_remaining = {}
@@ -91,9 +94,23 @@ def print_success_rates(scenario_dir):
     print("pso: ", algo_counters["pso"] / 80000)
     print("fk_truncated: ", algo_counters["fk_truncated"] / 80000)
 
+def print_help():
+    print("Please specify scenario dir and name as command line args.")
+    print("""
+    Usage:
+    python plot_results.py <scenario_dir_name> <scenario_name>
+
+    <scenario_dir_name> - subfolder of ./outputs/logs/ where the log file to plot is located
+    <scenario_name> - log file with the data to plot
+
+    Special inputs:
+    <scenario_name> == "all" --- plots all files in the specified <scenario_dir_name>
+    <scneario_name> == "success_rates" --- does not plot and instead outputs success rates of the algorithms
+    """)
+
 def main():
     if len(sys.argv) < 3:
-        print("Please specify scenario dir and name name as command line args.")
+        print_help()
         return
 
     scenario_dir_name = sys.argv[1]
@@ -109,7 +126,7 @@ def main():
             data = read_scenario(scenario_dir, name)
             plot_scenario_data(data, scenario_dir_name, name)
 
-    elif scenario_name == "print":
+    elif scenario_name == "success_rates":
         print_success_rates(scenario_dir)
 
     else:
