@@ -10,8 +10,8 @@ const n_problems::Int64 = 100
 const n_instantiations::Int64 = 100
 const n_samples::Int64 = 1000
 
-const c_selection_lower::Int64 = 500
-const c_selection_upper::Int64 = 1000
+const c_selection_lower::Int64 = 200
+const c_selection_upper::Int64 = 400
 const c_per_w_lower::Int64 = 2
 const c_per_w_upper::Int64 = 5
 
@@ -53,13 +53,13 @@ function make_normal_problems(rng, n_problems)
     resource_upper = 250.0
 
     for i in 1:n_problems
-        c_selection = rand(rng) * (c_selection_upper - c_selection_lower) + c_selection_lower
-        c_per_w = rand(rng) * (c_per_w_upper - c_per_w_lower) + c_per_w_lower
-
         offset = (i - 1) * n_resources
         problem_resources = Vector{SROResource}()
 
         for j in 1:n_resources
+            c_selection = rand(rng) * (c_selection_upper - c_selection_lower) + c_selection_lower
+            c_per_w = rand(rng) * (c_per_w_upper - c_per_w_lower) + c_per_w_lower
+
             resource_dist = truncated(Normal(resource_means[offset+j], resource_stds[offset+j]); lower=resource_lower, upper=resource_upper)
             new_resource = SROResource(
                 resource_dist,
@@ -103,13 +103,12 @@ function make_beta_problems(rng, n_problems)
     resource_upper = 250.0
 
     for i in 1:n_problems
-        c_selection = rand(rng) * (c_selection_upper - c_selection_lower) + c_selection_lower
-        c_per_w = rand(rng) * (c_per_w_upper - c_per_w_lower) + c_per_w_lower
-
         offset = (i - 1) * n_resources
         problem_resources = Vector{SROResource}()
 
         for j in 1:n_resources
+            c_selection = rand(rng) * (c_selection_upper - c_selection_lower) + c_selection_lower
+            c_per_w = rand(rng) * (c_per_w_upper - c_per_w_lower) + c_per_w_lower
 
             # make a beta distribution shifted to the expected mean and truncated
             beta_dist = Beta(2,4)
@@ -160,13 +159,12 @@ function make_weibull_problems(rng, n_problems)
     resource_upper = 250.0
 
     for i in 1:n_problems
-        c_selection = rand(rng) * (c_selection_upper - c_selection_lower) + c_selection_lower
-        c_per_w = rand(rng) * (c_per_w_upper - c_per_w_lower) + c_per_w_lower
-
         offset = (i - 1) * n_resources
         problem_resources = Vector{SROResource}()
 
         for j in 1:n_resources
+            c_selection = rand(rng) * (c_selection_upper - c_selection_lower) + c_selection_lower
+            c_per_w = rand(rng) * (c_per_w_upper - c_per_w_lower) + c_per_w_lower
 
             # make a beta distribution shifted to the expected mean and truncated
             weibull_dist = Weibull(1.5, 1)
