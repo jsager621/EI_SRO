@@ -19,7 +19,7 @@ c2 - 1.43
 w - 0.69
 v_max - 4.0
 """
-function bpso_truncated_normal_fit(rng, problem::SROProblem, n_samples::Int64; buy_all::Bool)::SROSolution
+function bpso_truncated_normal_fit(rng, problem::SROProblem, n_samples::Int64, n_particles::Int64, n_steps::Int64; buy_all::Bool)::SROSolution
     sigmoid(z::Real) = one(z) / (one(z) + exp(-z))
     
     resources = problem.resources
@@ -35,8 +35,8 @@ function bpso_truncated_normal_fit(rng, problem::SROProblem, n_samples::Int64; b
     cost_lowers = [r.c_selection for r in resources]
     cost_uppers = [r.possible_values.upper * r.c_per_w + r.c_selection for r in resources]
 
-    n_particles = 10
-    n_steps = 10
+    # n_particles = 10
+    # n_steps = 10
     c1 = 1.43
     c2 = 1.43
     w = 0.69

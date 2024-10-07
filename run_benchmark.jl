@@ -4,6 +4,8 @@ using Copulas, Distributions, Random, FromFile, JSON, LinearAlgebra
 
 P_TARGET::Float64 = 0.8
 n_resources::Int64 = 10
+bpso_particles = n_resources
+bpso_steps = n_resources
 slow_algos::Bool = true
 
 const n_problems::Int64 = 100
@@ -17,6 +19,8 @@ const c_per_w_upper::Int64 = 5
 
 const THIS_DIR::String = @__DIR__
 const OUTDIR::String = THIS_DIR * "/outputs/logs"
+
+
 
 
 function random_cov_matrix(rng, size)
@@ -226,7 +230,7 @@ function run_buy_all_problem_set(rng, problem_set, n_instantiations)
             fk_truncated_v_remaining = zeros(Float64, n_instantiations)
         end
 
-        pso_solution = bpso_truncated_normal_fit(rng, problem, n_samples; buy_all=true)
+        pso_solution = bpso_truncated_normal_fit(rng, problem, n_samples, bpso_particles, bpso_steps; buy_all=true)
         pso_costs = zeros(Float64, n_instantiations)
         
         take_all_costs = zeros(Float64, n_instantiations)
@@ -281,7 +285,7 @@ function run_buy_necessary_problem_set(rng, problem_set, n_instantiations)
             fk_truncated_v_remaining = zeros(Float64, n_instantiations)
         end
         
-        pso_solution = bpso_truncated_normal_fit(rng, problem, n_samples; buy_all=true)
+        pso_solution = bpso_truncated_normal_fit(rng, problem, n_samples, bpso_particles, bpso_steps; buy_all=true)
 
         pso_costs = zeros(Float64, n_instantiations)
         take_all_costs = zeros(Float64, n_instantiations)
@@ -335,7 +339,7 @@ function save_results(results, dir_name, run_name)
 end
 
 function main()
-    @assert length(ARGS) > 5 "Missing command line args."
+    @assert length(ARGS) > 7 "Missing command line args."
     seed = parse(Int64, ARGS[1])
     run_name = ARGS[2]
     gen_type = ARGS[3]
@@ -345,6 +349,8 @@ function main()
     global P_TARGET = parse(Float64, ARGS[6])
     global n_resources = parse(Int64, ARGS[7])
     global slow_algos = Bool(parse(Int64, ARGS[8]))
+    global bpso_particles = n_resources
+    global bpso_steps = n_resources
 
     name_to_gen_function = Dict(
         "n" => make_normal_problems,
