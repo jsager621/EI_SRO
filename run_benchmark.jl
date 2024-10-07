@@ -2,11 +2,12 @@ using Copulas, Distributions, Random, FromFile, JSON, LinearAlgebra
 @from "src/sro/sro_problem_generation.jl" using SROProblems
 @from "src/sro/solvers/solver.jl" using SROSolvers
 
-const P_TARGET::Float64 = 0.8
+P_TARGET::Float64 = 0.8
+n_resources::Int64 = 10
+slow_algos::Bool = true
 
 const n_problems::Int64 = 100
 const n_instantiations::Int64 = 100
-const n_resources::Int64 = 10
 const n_samples::Int64 = 1000
 
 const c_selection_lower::Int64 = 500
@@ -218,38 +219,48 @@ function run_buy_all_problem_set(rng, problem_set, n_instantiations)
         output[string(i)] = Dict{String,Any}()
 
         instantiate_problem!(problem, rng)
-        fk_truncated_solution = fk_truncated_normal_fit(rng, problem, n_samples; buy_all=true)
-        pso_solution = bpso_truncated_normal_fit(rng, problem, n_samples; buy_all=true)
 
-        fk_truncated_costs = zeros(Float64, n_instantiations)
+        if slow_algos
+            fk_truncated_solution = fk_truncated_normal_fit(rng, problem, n_samples; buy_all=true)
+            fk_truncated_costs = zeros(Float64, n_instantiations)
+            oracle_costs = zeros(Float64, n_instantiations)
+            oracle_v_remaining = zeros(Float64, n_instantiations)
+            fk_truncated_v_remaining = zeros(Float64, n_instantiations)
+        end
+
+        pso_solution = bpso_truncated_normal_fit(rng, problem, n_samples; buy_all=true)
         pso_costs = zeros(Float64, n_instantiations)
-        oracle_costs = zeros(Float64, n_instantiations)
+        
         take_all_costs = zeros(Float64, n_instantiations)
 
-        oracle_v_remaining = zeros(Float64, n_instantiations)
-        fk_truncated_v_remaining = zeros(Float64, n_instantiations)
         pso_v_remaining = zeros(Float64, n_instantiations)
         take_all_v_remaining = zeros(Float64, n_instantiations)
 
         # NOTE: we abuse the fact here that resource subsets are shared by reference
         for i in 1:n_instantiations
             instantiate_problem!(problem, rng)
-            oracle_solution = oracle_solve_buy_all(problem)
 
-            oracle_costs[i] = oracle_solution.cost
-            fk_truncated_costs[i] = total_cost(fk_truncated_solution.chosen_resources)
+            if slow_algos
+                oracle_solution = oracle_solve_buy_all(problem)
+                oracle_costs[i] = oracle_solution.cost
+                fk_truncated_costs[i] = total_cost(fk_truncated_solution.chosen_resources)
+                oracle_v_remaining[i] = oracle_solution.v_remaining
+                fk_truncated_v_remaining[i] = remaining_target(fk_truncated_solution.chosen_resources, problem.target.v_target)
+            end
+            
             pso_costs[i] = total_cost(pso_solution.chosen_resources)
-            take_all_costs[i] = total_cost(problem.resources)
-
-            oracle_v_remaining[i] = oracle_solution.v_remaining
-            take_all_v_remaining[i] = oracle_solution.v_remaining
-            fk_truncated_v_remaining[i] = remaining_target(fk_truncated_solution.chosen_resources, problem.target.v_target)
             pso_v_remaining[i] = remaining_target(pso_solution.chosen_resources, problem.target.v_target)
+
+            take_all_costs[i] = total_cost(problem.resources)
+            take_all_v_remaining[i] = remaining_target(problem.resources, problem.target.v_target)
         end
 
-        output[string(i)]["fk_truncated"] = (fk_truncated_costs, fk_truncated_v_remaining)
+        if slow_algos
+            output[string(i)]["fk_truncated"] = (fk_truncated_costs, fk_truncated_v_remaining)
+            output[string(i)]["oracle"] = (oracle_costs, oracle_v_remaining)
+        end
+        
         output[string(i)]["pso"] = (pso_costs, pso_v_remaining)
-        output[string(i)]["oracle"] = (oracle_costs, oracle_v_remaining)
         output[string(i)]["take_all"] = (take_all_costs, take_all_v_remaining)
     end
 
@@ -261,42 +272,50 @@ function run_buy_necessary_problem_set(rng, problem_set, n_instantiations)
 
     Threads.@threads for (i, problem) in collect(enumerate(problem_set))
         v_target = problem.target.v_target
-
         output[string(i)] = Dict{String,Any}()
-
         instantiate_problem!(problem, rng)
-        fk_truncated_solution = fk_truncated_normal_fit(rng, problem, n_samples; buy_all=true)
+
+        if slow_algos
+            fk_truncated_solution = fk_truncated_normal_fit(rng, problem, n_samples; buy_all=true)
+            fk_truncated_costs = zeros(Float64, n_instantiations)
+            oracle_costs = zeros(Float64, n_instantiations)
+            oracle_v_remaining = zeros(Float64, n_instantiations)
+            fk_truncated_v_remaining = zeros(Float64, n_instantiations)
+        end
+        
         pso_solution = bpso_truncated_normal_fit(rng, problem, n_samples; buy_all=true)
 
-        fk_truncated_costs = zeros(Float64, n_instantiations)
         pso_costs = zeros(Float64, n_instantiations)
-        oracle_costs = zeros(Float64, n_instantiations)
         take_all_costs = zeros(Float64, n_instantiations)
 
-        oracle_v_remaining = zeros(Float64, n_instantiations)
-        fk_truncated_v_remaining = zeros(Float64, n_instantiations)
         pso_v_remaining = zeros(Float64, n_instantiations)
         take_all_v_remaining = zeros(Float64, n_instantiations)
 
         # NOTE: we abuse the fact here that resource subsets are shared by reference
         for i in 1:n_instantiations
             instantiate_problem!(problem, rng)
-            oracle_solution = oracle_solve_buy_necessary(problem)
 
-            oracle_costs[i] = oracle_solution.cost
-            fk_truncated_costs[i] = target_cost(fk_truncated_solution.chosen_resources, v_target)
+            if slow_algos
+                oracle_solution = oracle_solve_buy_necessary(problem)
+                oracle_costs[i] = oracle_solution.cost
+                fk_truncated_costs[i] = target_cost(fk_truncated_solution.chosen_resources, v_target)
+                oracle_v_remaining[i] = oracle_solution.v_remaining
+                fk_truncated_v_remaining[i] = remaining_target(fk_truncated_solution.chosen_resources, problem.target.v_target)
+            end
+            
             pso_costs[i] = target_cost(pso_solution.chosen_resources, v_target)
-            take_all_costs[i] = target_cost(problem.resources, v_target)
-
-            oracle_v_remaining[i] = oracle_solution.v_remaining
-            take_all_v_remaining[i] = oracle_solution.v_remaining
-            fk_truncated_v_remaining[i] = remaining_target(fk_truncated_solution.chosen_resources, problem.target.v_target)
             pso_v_remaining[i] = remaining_target(pso_solution.chosen_resources, problem.target.v_target)
+
+            take_all_costs[i] = target_cost(problem.resources, v_target)
+            take_all_v_remaining[i] = remaining_target(problem.resources, problem.target.v_target)
         end
 
-        output[string(i)]["fk_truncated"] = (fk_truncated_costs, fk_truncated_v_remaining)
+        if slow_algos
+            output[string(i)]["fk_truncated"] = (fk_truncated_costs, fk_truncated_v_remaining)
+            output[string(i)]["oracle"] = (oracle_costs, oracle_v_remaining)
+        end
+        
         output[string(i)]["pso"] = (pso_costs, pso_v_remaining)
-        output[string(i)]["oracle"] = (oracle_costs, oracle_v_remaining)
         output[string(i)]["take_all"] = (take_all_costs, take_all_v_remaining)
     end
 
@@ -326,6 +345,8 @@ function main()
     dir_name = ARGS[5]
 
     global P_TARGET = parse(Float64, ARGS[6])
+    global n_resources = parse(Int64, ARGS[7])
+    global slow_algos = Bool(parse(Int64, ARGS[8]))
 
     name_to_gen_function = Dict(
         "n" => make_normal_problems,

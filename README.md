@@ -59,7 +59,7 @@ The solution performance analysis was done via the `run_benchmark.jl` script.
 This script requires 5 command line arguments:
 
 ```
-julia --project=. run_benchmark.jl <rng_seed> <run_name> <generator_type> <market_type> <output_subdirectory>
+julia --project=. run_benchmark.jl <rng_seed> <run_name> <generator_type> <market_type> <output_subdirectory> <p_target> <n_resources> <all_algos>
 ```
 
 In order, these define:
@@ -68,6 +68,9 @@ In order, these define:
 * <generator_type> - can be "n", "b", "w", "m" for Normal, Beta, Weibull or mixed scenarios, respectively.
 * <market_type> - "1" for buy-all, "0" for buy-necessary
 * <output_subdirectory> - subfolder of `./outputs/logs/` to save the results to
+* <p_target> - target probability of the problems
+* <n_resources> - number of resources per problem
+* <all_algos> - "1" to include full and oracle solvers, "0" for heuristics only
 
 Additional simulation simulation parameters like the number of problems and instances sampled and the number of samples used by the fitting-based algorithms can be edited at the top of the script file.
 
