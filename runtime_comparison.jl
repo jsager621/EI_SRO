@@ -17,16 +17,25 @@ end
 
 rng = Xoshiro(1)
 n_samples = 1000
-max_resources = 12
+max_resources = 40
+slow_cutoff = 12
 
 oracle_buy_all_means = Vector{Float64}()
 oracle_buy_nec_means = Vector{Float64}()
 bpso_means = Vector{Float64}()
+evo_means = Vector{Float64}()
+size_sampling_means = Vector{Float64}()
 fk_means = Vector{Float64}()
 
 
 function main()
     for i in 1:max_resources
+        bpso_particles = i
+        bpso_steps = i
+        evo_steps = i^2
+        subset_size_samples = i
+
+
         resource_set = [SROResource(
             truncated(Normal(5,5); lower=0, upper=10),
             n * 100,
@@ -51,26 +60,39 @@ function main()
             target
         )
 
-        o_buy_all = @benchmark oracle_solve_buy_all($problem) samples=100
-        o_buy_nec = @benchmark oracle_solve_buy_necessary($problem) samples=100
-        bpso = @benchmark bpso_truncated_normal_fit($rng, $problem, $n_samples; buy_all=true) samples=100
-        fk = @benchmark fk_truncated_normal_fit($rng, $problem, $n_samples; buy_all=true) samples=100
+        if i <= slow_cutoff
+            o_buy_all = @benchmark oracle_solve_buy_all($problem) samples=100
+            o_buy_nec = @benchmark oracle_solve_buy_necessary($problem) samples=100
+            fk = @benchmark fk_truncated_normal_fit($rng, $problem, $n_samples; buy_all=true) samples=100
+        end
+        
+        bpso = @benchmark bpso_truncated_normal_fit($rng, $problem, $n_samples, $bpso_particles, $bpso_steps; buy_all=true) samples=100
+        evo = @benchmark one_plus_one_evo_truncated_normal_fit($rng, $problem, $n_samples, $evo_steps; buy_all=true, p_bit_flip=0.3)
+        size_sampling = @benchmark subset_size_truncated_normal_fit($rng, $problem, $n_samples, $subset_size_samples; buy_all=true)
+        
 
-        push!(oracle_buy_all_means, mean(o_buy_all).time)
-        push!(oracle_buy_nec_means, mean(o_buy_nec).time)
+        if i <= slow_cutoff
+            push!(oracle_buy_all_means, mean(o_buy_all).time)
+            push!(oracle_buy_nec_means, mean(o_buy_nec).time)
+            push!(fk_means, mean(fk).time)
+        end
+        
         push!(bpso_means, mean(bpso).time)
-        push!(fk_means, mean(fk).time)
+        push!(evo_means, mean(evo).time)
+        push!(size_sampling_means, mean(size_sampling).time)
     end
 
-    println(oracle_buy_all_means)
-    println(oracle_buy_nec_means)
-    println(bpso_means)
-    println(fk_means)
+    # println(oracle_buy_all_means)
+    # println(oracle_buy_nec_means)
+    # println(bpso_means)
+    # println(fk_means)
 
     output = Dict(
         "oracle_buy_all" => oracle_buy_all_means,
         "oracle_buy_nec" => oracle_buy_nec_means,
-        "bpso_approx" => bpso_means,
+        "bpso" => bpso_means,
+        "evo" => evo_means,
+        "size_sampling" => size_sampling_means,
         "full_approx" => fk_means
     )
 
