@@ -18,7 +18,8 @@ end
 rng = Xoshiro(1)
 n_samples = 1000
 max_resources = 40
-slow_cutoff = 12
+oracle_cutoff = 15
+fk_cutoff = 12
 
 oracle_buy_all_means = Vector{Float64}()
 oracle_buy_nec_means = Vector{Float64}()
@@ -60,23 +61,29 @@ function main()
             target
         )
 
-        if i <= slow_cutoff
-            o_buy_all = @benchmark oracle_solve_buy_all($problem) samples=100
-            o_buy_nec = @benchmark oracle_solve_buy_necessary($problem) samples=100
+        if i <= fk_cutoff
             fk = @benchmark fk_truncated_normal_fit($rng, $problem, $n_samples; buy_all=true) samples=100
         end
-        
+
+        if i <= oracle_cutoff
+            o_buy_nec = @benchmark oracle_solve_buy_necessary($problem) samples=100
+        end
+
+        o_buy_all = @benchmark oracle_solve_buy_all($problem) samples=100
         bpso = @benchmark bpso_truncated_normal_fit($rng, $problem, $n_samples, $bpso_particles, $bpso_steps; buy_all=true) samples=100
         evo = @benchmark one_plus_one_evo_truncated_normal_fit($rng, $problem, $n_samples, $evo_steps; buy_all=true, p_bit_flip=0.3)
         size_sampling = @benchmark subset_size_truncated_normal_fit($rng, $problem, $n_samples, $subset_size_samples; buy_all=true)
         
 
-        if i <= slow_cutoff
-            push!(oracle_buy_all_means, mean(o_buy_all).time)
-            push!(oracle_buy_nec_means, mean(o_buy_nec).time)
+        if i <= fk_cutoff
             push!(fk_means, mean(fk).time)
         end
+
+        if i <= oracle_cutoff 
+            push!(oracle_buy_nec_means, mean(o_buy_nec).time)
+        end
         
+        push!(oracle_buy_all_means, mean(o_buy_all).time)
         push!(bpso_means, mean(bpso).time)
         push!(evo_means, mean(evo).time)
         push!(size_sampling_means, mean(size_sampling).time)
