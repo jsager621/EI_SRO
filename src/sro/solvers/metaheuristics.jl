@@ -1,6 +1,32 @@
 using Random
 
 """
+Helper function for truncated fit evaluations.
+"""
+function evaluation(
+    subset::Vector{Int64},
+    target::SROTarget,
+    value_sample_data::Matrix{Float64},
+    cost_sample_data::Matrix{Float64},
+    lowers::Vector{Float64},
+    uppers::Vector{Float64},
+    cost_lowers::Vector{Float64},
+    cost_uppers::Vector{Float64},
+)::Float64
+
+    value_fit_dist, cost_fit_dist = fit_subset(subset, value_sample_data, cost_sample_data)
+    value_min = sum(lowers[subset])
+    value_max = sum(uppers[subset])
+    value_truncated_dist = truncated(value_fit_dist; lower = value_min, upper = value_max)
+
+    cost_min = sum(cost_lowers[subset])
+    cost_max = sum(cost_uppers[subset])
+    cost_truncated_dist = truncated(cost_fit_dist; lower = cost_min, upper = cost_max)
+    return expected_cost(value_truncated_dist, cost_truncated_dist, target)
+end
+
+
+"""
 Binary PSO algorithm as originally described by Kennedy and Eberhart (1997).
 This implementation uses two acceleration constants, a global best topology, and
 an intertia constant.
@@ -19,9 +45,16 @@ c2 - 1.43
 w - 0.69
 v_max - 4.0
 """
-function bpso_truncated_normal_fit(rng, problem::SROProblem, n_samples::Int64, n_particles::Int64, n_steps::Int64; buy_all::Bool)::SROSolution
+function bpso_truncated_normal_fit(
+    rng,
+    problem::SROProblem,
+    n_samples::Int64,
+    n_particles::Int64,
+    n_steps::Int64;
+    buy_all::Bool,
+)::SROSolution
     sigmoid(z::Real) = one(z) / (one(z) + exp(-z))
-    
+
     resources = problem.resources
     target = problem.target
     value_sklar_dist = get_gaussian_sklar_value_dist(problem)
@@ -45,25 +78,9 @@ function bpso_truncated_normal_fit(rng, problem::SROProblem, n_samples::Int64, n
     assert_msg1 = "truncated normal solver requires all resources to be truncated with upper and lower bound"
     @assert all([r.possible_values isa Truncated for r in resources]) assert_msg1
 
-    function evaluation(subset::Vector{Int64}, target::SROTarget)::Float64
-        value_fit_dist, cost_fit_dist = fit_subset(subset, value_sample_data, cost_sample_data)
-        value_min = sum(lowers[subset])
-        value_max = sum(uppers[subset])
-        value_truncated_dist = truncated(value_fit_dist; lower=value_min, upper=value_max)
-
-        cost_min = sum(cost_lowers[subset])
-        cost_max = sum(cost_uppers[subset])
-        cost_truncated_dist = truncated(cost_fit_dist; lower=cost_min, upper=cost_max)
-        return expected_cost(value_truncated_dist, cost_truncated_dist, target)
-    end
-
     if sum([r.possible_values.upper for r in resources]) < target.v_target
         # no feasible solution exists
-        return SROSolution(
-                Vector{SROResource}(),
-                Inf,
-                target.v_target
-        )
+        return SROSolution(Vector{SROResource}(), Inf, target.v_target)
     end
 
     # init particles and global best
@@ -76,11 +93,31 @@ function bpso_truncated_normal_fit(rng, problem::SROProblem, n_samples::Int64, n
         push!(particle_velocities, zeros(Float64, length(resources)))
     end
     particle_bests = deepcopy(particle_positions)
-    particle_best_evals = [evaluation(indices[x], target) for x in particle_bests]
+    particle_best_evals = [
+        evaluation(
+            indices[x],
+            target,
+            value_sample_data,
+            cost_sample_data,
+            lowers,
+            uppers,
+            cost_lowers,
+            cost_uppers,
+        ) for x in particle_bests
+    ]
 
     # initialize global best to full selection
     global_best = ones(Bool, length(resources))
-    global_best_eval = evaluation(indices, target)
+    global_best_eval = evaluation(
+        indices,
+        target,
+        value_sample_data,
+        cost_sample_data,
+        lowers,
+        uppers,
+        cost_lowers,
+        cost_uppers,
+    )
 
     # velocity update: v(t+1) = w * v(t) + c1 R1 (local_best - position) + c2 R2 (g_best - position)
     # have to apply this bitwise of course
@@ -114,7 +151,16 @@ function bpso_truncated_normal_fit(rng, problem::SROProblem, n_samples::Int64, n
             particle_positions[i] = pos_new
 
             # evaluate
-            eval_new = evaluation(indices[pos_new], target)
+            eval_new = evaluation(
+                indices[pos_new],
+                target,
+                value_sample_data,
+                cost_sample_data,
+                lowers,
+                uppers,
+                cost_lowers,
+                cost_uppers,
+            )
 
             if eval_new < local_eval
                 particle_best_evals[i] = eval_new
@@ -135,15 +181,15 @@ function bpso_truncated_normal_fit(rng, problem::SROProblem, n_samples::Int64, n
 
     if buy_all
         return SROSolution(
-                output_set,
-                total_cost(output_set),
-                remaining_target(output_set, target.v_target)
-                )
+            output_set,
+            total_cost(output_set),
+            remaining_target(output_set, target.v_target),
+        )
     else
         return SROSolution(
-                    output_set,
-                    target_cost(output_set, target.v_target),
-                    remaining_target(output_set, target.v_target)
-                )
+            output_set,
+            target_cost(output_set, target.v_target),
+            remaining_target(output_set, target.v_target),
+        )
     end
 end
