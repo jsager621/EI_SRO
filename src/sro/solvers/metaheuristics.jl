@@ -193,3 +193,100 @@ function bpso_truncated_normal_fit(
         )
     end
 end
+
+
+function one_plus_one_evo_truncated_normal_fit(
+    rng,
+    problem::SROProblem,
+    n_samples::Int64,
+    n_steps::Int64;
+    buy_all::Bool,
+    p_bit_flip::Float64
+)::SROSolution
+
+    resources = problem.resources
+    target = problem.target
+    value_sklar_dist = get_gaussian_sklar_value_dist(problem)
+    cost_sklar_dist = get_gaussian_sklar_cost_dist(problem)
+    indices = collect(1:length(resources))
+    value_sample_data = rand(rng, value_sklar_dist, n_samples)
+    cost_sample_data = rand(rng, cost_sklar_dist, n_samples)
+
+    uppers = [r.possible_values.upper for r in resources]
+    lowers = [r.possible_values.lower for r in resources]
+    cost_lowers = [r.c_selection for r in resources]
+    cost_uppers = [r.possible_values.upper * r.c_per_w + r.c_selection for r in resources]
+
+    if sum([r.possible_values.upper for r in resources]) < target.v_target
+        # no feasible solution exists
+        return SROSolution(Vector{SROResource}(), Inf, target.v_target)
+    end
+
+    global_best = ones(Bool, length(resources))
+    global_best_eval = evaluation(
+        indices,
+        target,
+        value_sample_data,
+        cost_sample_data,
+        lowers,
+        uppers,
+        cost_lowers,
+        cost_uppers,
+    )
+
+    known_combinations = Vector{Vector{Bool}}()
+    push!(known_combinations, ones(Bool, length(resources)))
+
+    select_vector = ones(Bool, length(resources))
+
+    for _ in 1:n_steps
+        new_select_vector = zeros(Bool, length(resources))
+        for i in eachindex(new_select_vector)
+            if rand(rng) <= p_bit_flip
+                new_select_vector[i] = !select_vector[i]
+            else
+                new_select_vector[i] = select_vector[i]
+            end
+        end
+
+        if new_select_vector in known_combinations
+            # no way to improve, skip
+            continue
+        else
+            push!(known_combinations, new_select_vector)
+        end
+
+        new_eval = evaluation(
+            indices[new_select_vector],
+            target,
+            value_sample_data,
+            cost_sample_data,
+            lowers,
+            uppers,
+            cost_lowers,
+            cost_uppers,
+        )
+
+        if new_eval < global_best_eval
+            global_best_eval = new_eval
+            global_best = new_select_vector
+        end
+    end
+
+
+
+    output_set = resources[global_best]
+    if buy_all
+        return SROSolution(
+            output_set,
+            total_cost(output_set),
+            remaining_target(output_set, target.v_target),
+        )
+    else
+        return SROSolution(
+            output_set,
+            target_cost(output_set, target.v_target),
+            remaining_target(output_set, target.v_target),
+        )
+    end
+end

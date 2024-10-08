@@ -54,8 +54,13 @@ def plot_scenario_data(data, scenario_dir_name, scenario_name):
             for algo_name in result_costs.keys():
                 filtered_costs[algo_name].append(result_costs[algo_name][i])
 
+    col_names = list(filtered_costs.keys())
+    if "take_all" in col_names:
+        col_names.remove("take_all")
+        col_names.insert(0, "take_all")
+
     # seaborn.boxplot({"one": data, "two": data, "three": data}).set(xlabel="algo", ylabel="cost")
-    plot = sns.boxplot(filtered_costs)
+    plot = sns.boxplot(filtered_costs, order=col_names)
     plot.set(xlabel="algorithm", ylabel="cumulative result costs")
     plot.set(title=scenario_name[:-2])
     fig = plot.get_figure()
