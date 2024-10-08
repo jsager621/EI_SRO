@@ -7,6 +7,7 @@ n_resources::Int64 = 10
 bpso_particles = n_resources
 bpso_steps = n_resources
 evo_steps = n_resources^2
+subset_size_samples = n_resources
 slow_algos::Bool = true
 
 const n_problems::Int64 = 100
@@ -246,6 +247,10 @@ function run_buy_all_problem_set(rng, problem_set, n_instantiations)
         evo_80_solution = one_plus_one_evo_truncated_normal_fit(rng, problem, n_samples, evo_steps; buy_all=true, p_bit_flip=0.80)
         evo_80_costs = zeros(Float64, n_instantiations)
         evo_80_v_remaining = zeros(Float64, n_instantiations)
+
+        size_sampling_solution = subset_size_truncated_normal_fit(rng, problem, n_samples, subset_size_samples; buy_all=true)
+        size_sampling_costs = zeros(Float64, n_instantiations)
+        size_sampling_v_remaining = zeros(Float64, n_instantiations)
         
         take_all_costs = zeros(Float64, n_instantiations)
         take_all_v_remaining = zeros(Float64, n_instantiations)
@@ -274,6 +279,9 @@ function run_buy_all_problem_set(rng, problem_set, n_instantiations)
             evo_80_costs[i] = total_cost(evo_80_solution.chosen_resources)
             evo_80_v_remaining[i] = remaining_target(evo_80_solution.chosen_resources, problem.target.v_target)
 
+            size_sampling_costs[i] = total_cost(size_sampling_solution.chosen_resources)
+            size_sampling_v_remaining[i] = remaining_target(size_sampling_solution.chosen_resources, problem.target.v_target)
+
             take_all_costs[i] = total_cost(problem.resources)
             take_all_v_remaining[i] = remaining_target(problem.resources, problem.target.v_target)
         end
@@ -287,6 +295,7 @@ function run_buy_all_problem_set(rng, problem_set, n_instantiations)
         output[string(i)]["evo_30"] = (evo_30_costs, evo_30_v_remaining)
         output[string(i)]["evo_60"] = (evo_60_costs, evo_60_v_remaining)
         output[string(i)]["evo_80"] = (evo_80_costs, evo_80_v_remaining)
+        output[string(i)]["size_sampling"] = (size_sampling_costs, size_sampling_v_remaining)
         output[string(i)]["take_all"] = (take_all_costs, take_all_v_remaining)
     end
 
@@ -324,6 +333,10 @@ function run_buy_necessary_problem_set(rng, problem_set, n_instantiations)
         evo_80_solution = one_plus_one_evo_truncated_normal_fit(rng, problem, n_samples, evo_steps; buy_all=false, p_bit_flip=0.80)
         evo_80_costs = zeros(Float64, n_instantiations)
         evo_80_v_remaining = zeros(Float64, n_instantiations)
+
+        size_sampling_solution = subset_size_truncated_normal_fit(rng, problem, n_samples, subset_size_samples; buy_all=false)
+        size_sampling_costs = zeros(Float64, n_instantiations)
+        size_sampling_v_remaining = zeros(Float64, n_instantiations)
         
         take_all_costs = zeros(Float64, n_instantiations)
         take_all_v_remaining = zeros(Float64, n_instantiations)
@@ -352,6 +365,9 @@ function run_buy_necessary_problem_set(rng, problem_set, n_instantiations)
             evo_80_costs[i] = total_cost(evo_80_solution.chosen_resources)
             evo_80_v_remaining[i] = remaining_target(evo_80_solution.chosen_resources, problem.target.v_target)
 
+            size_sampling_costs[i] = total_cost(size_sampling_solution.chosen_resources)
+            size_sampling_v_remaining[i] = remaining_target(size_sampling_solution.chosen_resources, problem.target.v_target)
+
             take_all_costs[i] = target_cost(problem.resources, v_target)
             take_all_v_remaining[i] = remaining_target(problem.resources, problem.target.v_target)
         end
@@ -365,6 +381,7 @@ function run_buy_necessary_problem_set(rng, problem_set, n_instantiations)
         output[string(i)]["evo_30"] = (evo_30_costs, evo_30_v_remaining)
         output[string(i)]["evo_60"] = (evo_60_costs, evo_60_v_remaining)
         output[string(i)]["evo_80"] = (evo_80_costs, evo_80_v_remaining)
+        output[string(i)]["size_sampling"] = (size_sampling_costs, size_sampling_v_remaining)
         output[string(i)]["take_all"] = (take_all_costs, take_all_v_remaining)
     end
 
@@ -399,6 +416,7 @@ function main()
     global bpso_particles = n_resources
     global bpso_steps = n_resources
     global evo_steps = n_resources^2
+    global subset_size_samples = n_resources
 
     name_to_gen_function = Dict(
         "n" => make_normal_problems,

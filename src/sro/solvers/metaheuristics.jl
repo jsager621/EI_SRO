@@ -273,7 +273,75 @@ function one_plus_one_evo_truncated_normal_fit(
         end
     end
 
+    output_set = resources[global_best]
+    if buy_all
+        return SROSolution(
+            output_set,
+            total_cost(output_set),
+            remaining_target(output_set, target.v_target),
+        )
+    else
+        return SROSolution(
+            output_set,
+            target_cost(output_set, target.v_target),
+            remaining_target(output_set, target.v_target),
+        )
+    end
+end
 
+function subset_size_truncated_normal_fit(
+    rng,
+    problem::SROProblem,
+    n_samples::Int64,
+    n_subset_samples::Int64;
+    buy_all::Bool,
+)::SROSolution
+resources = problem.resources
+    target = problem.target
+    value_sklar_dist = get_gaussian_sklar_value_dist(problem)
+    cost_sklar_dist = get_gaussian_sklar_cost_dist(problem)
+    indices = collect(1:length(resources))
+    value_sample_data = rand(rng, value_sklar_dist, n_samples)
+    cost_sample_data = rand(rng, cost_sklar_dist, n_samples)
+
+    uppers = [r.possible_values.upper for r in resources]
+    lowers = [r.possible_values.lower for r in resources]
+    cost_lowers = [r.c_selection for r in resources]
+    cost_uppers = [r.possible_values.upper * r.c_per_w + r.c_selection for r in resources]
+
+    global_best = ones(Bool, length(resources))
+    global_best_eval = evaluation(
+        indices,
+        target,
+        value_sample_data,
+        cost_sample_data,
+        lowers,
+        uppers,
+        cost_lowers,
+        cost_uppers,
+    )
+
+    for size in 1:length(resources)-1
+        base = vcat(ones(Bool, size), zeros(Bool, length(resources)-size))
+        for _ in 1:n_subset_samples
+            sample = shuffle(rng, base)
+            new_eval = evaluation(
+                indices[sample],
+                target,
+                value_sample_data,
+                cost_sample_data,
+                lowers,
+                uppers,
+                cost_lowers,
+                cost_uppers,
+            )
+
+            if new_eval < global_best_eval
+                global_best_eval = new_eval
+                global_best = sample
+            end
+        end
+    end
 
     output_set = resources[global_best]
     if buy_all
