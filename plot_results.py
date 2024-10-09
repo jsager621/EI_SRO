@@ -101,23 +101,38 @@ def print_success_rates(scenario_dir):
         scenarios.append(data)
 
     algo_counters = {
+        "evo": 0,
+        "by_size": 0,
         "pso": 0,
         "fk_truncated": 0
     }
 
     for scenario in scenarios:
         for i_problem in scenario.keys():
+            evo_data = scenario[i_problem]["evo_30"]
+            by_size_data = scenario[i_problem]["size_sampling"]
             bpso_data = scenario[i_problem]["pso"]
-            full_data = scenario[i_problem]["fk_truncated"]
+            if "fk_truncated" in scenario[i_problem].keys():
+                full_data = scenario[i_problem]["fk_truncated"]
             # oracle_data = scenario[i_problem]["oracle"]
 
+            evo_successes = len([x for x in evo_data[1] if x == 0])
+            by_size_successes = len([x for x in by_size_data[1] if x == 0])
             bpso_successes = len([x for x in bpso_data[1] if x == 0])
-            full_successes = len([x for x in full_data[1] if x == 0])
 
+            if "fk_truncated" in scenario[i_problem].keys():
+                full_successes = len([x for x in full_data[1] if x == 0])
+
+            algo_counters["evo"] += evo_successes
+            algo_counters["by_size"] += by_size_successes
             algo_counters["pso"] += bpso_successes
-            algo_counters["fk_truncated"] += full_successes
+
+            if "fk_truncated" in scenario[i_problem].keys():
+                algo_counters["fk_truncated"] += full_successes
 
     print(algo_counters)
+    print("evo: ", algo_counters["evo"] / 80000)
+    print("by_size: ", algo_counters["by_size"] / 80000)
     print("pso: ", algo_counters["pso"] / 80000)
     print("fk_truncated: ", algo_counters["fk_truncated"] / 80000)
 
