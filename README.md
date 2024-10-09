@@ -90,7 +90,7 @@ julia --project=. runtime_comparison.jl
 The results of this script are also saved to `./outputs/logs`.
 
 ## Plots
-Most paper plots are already included in the repository. 
+The plots used directly in the paper are included in the repository.
 Box plots of the different algorithm performances were created using the `plot_results.py` script using the [seaborn](https://seaborn.pydata.org/) library.
 
-The two plots showcasing the example scenario were also created using seaborn in the `scenario_plots.ipynb` notebook.
+The scripts to create the two congestion scenario plots are included in the `paper_plots` directory.

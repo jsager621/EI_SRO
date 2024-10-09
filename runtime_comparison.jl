@@ -18,7 +18,7 @@ end
 rng = Xoshiro(1)
 n_samples = 1000
 max_resources = 40
-oracle_cutoff = 15
+oracle_cutoff = 20
 fk_cutoff = 12
 
 oracle_buy_all_means = Vector{Float64}()

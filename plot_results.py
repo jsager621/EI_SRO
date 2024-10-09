@@ -54,7 +54,29 @@ def plot_scenario_data(data, scenario_dir_name, scenario_name):
             for algo_name in result_costs.keys():
                 filtered_costs[algo_name].append(result_costs[algo_name][i])
 
+    # rename for plots
+    if "size_sampling" in filtered_costs:
+        filtered_costs["by_size"] = filtered_costs["size_sampling"]
+        del(filtered_costs["size_sampling"])
+
+    if "fk_truncated" in filtered_costs:
+        filtered_costs["full"] = filtered_costs["fk_truncated"]
+        del(filtered_costs["fk_truncated"])
+
+    # order for plots
     col_names = list(filtered_costs.keys())
+
+    # third
+    if "full" in col_names:
+        col_names.remove("full")
+        col_names.insert(0, "full")
+
+    # second
+    if "oracle" in col_names:
+        col_names.remove("oracle")
+        col_names.insert(0, "oracle")
+
+    # first
     if "take_all" in col_names:
         col_names.remove("take_all")
         col_names.insert(0, "take_all")

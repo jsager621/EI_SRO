@@ -42,7 +42,7 @@ julia --project=. --threads=10 run_benchmark.jl 1 buy_nec_weibull_1 w 0 40_p50 0
 julia --project=. --threads=10 run_benchmark.jl 1 buy_nec_mixed_1 m 0 40_p50 0.5 40 0
 
 
-julia --project=. --threads=10 run_benchmark.jl 1 buy_all_normal_1 n 1 40_p60 0.6 10 10
+julia --project=. --threads=10 run_benchmark.jl 1 buy_all_normal_1 n 1 40_p60 0.6 10 0
 julia --project=. --threads=10 run_benchmark.jl 1 buy_all_beta_1 b 1 40_p60 0.6 40 0
 julia --project=. --threads=10 run_benchmark.jl 1 buy_all_weibull_1 w 1 40_p60 0.6 40 0
 julia --project=. --threads=10 run_benchmark.jl 1 buy_all_mixed_1 m 1 40_p60 0.6 40 0

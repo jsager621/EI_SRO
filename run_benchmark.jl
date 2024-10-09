@@ -227,10 +227,11 @@ function run_buy_all_problem_set(rng, problem_set, n_instantiations)
         if slow_algos
             fk_truncated_solution = fk_truncated_normal_fit(rng, problem, n_samples; buy_all=true)
             fk_truncated_costs = zeros(Float64, n_instantiations)
-            oracle_costs = zeros(Float64, n_instantiations)
-            oracle_v_remaining = zeros(Float64, n_instantiations)
             fk_truncated_v_remaining = zeros(Float64, n_instantiations)
         end
+
+        oracle_costs = zeros(Float64, n_instantiations)
+        oracle_v_remaining = zeros(Float64, n_instantiations)
 
         pso_solution = bpso_truncated_normal_fit(rng, problem, n_samples, bpso_particles, bpso_steps; buy_all=true)
         pso_costs = zeros(Float64, n_instantiations)
@@ -260,12 +261,13 @@ function run_buy_all_problem_set(rng, problem_set, n_instantiations)
             instantiate_problem!(problem, rng)
 
             if slow_algos
-                oracle_solution = oracle_solve_buy_all(problem)
-                oracle_costs[i] = oracle_solution.cost
                 fk_truncated_costs[i] = total_cost(fk_truncated_solution.chosen_resources)
-                oracle_v_remaining[i] = oracle_solution.v_remaining
                 fk_truncated_v_remaining[i] = remaining_target(fk_truncated_solution.chosen_resources, problem.target.v_target)
             end
+
+            oracle_solution = oracle_solve_buy_all(problem)
+            oracle_costs[i] = oracle_solution.cost
+            oracle_v_remaining[i] = oracle_solution.v_remaining
             
             pso_costs[i] = total_cost(pso_solution.chosen_resources)
             pso_v_remaining[i] = remaining_target(pso_solution.chosen_resources, problem.target.v_target)
@@ -288,9 +290,9 @@ function run_buy_all_problem_set(rng, problem_set, n_instantiations)
 
         if slow_algos
             output[string(i)]["fk_truncated"] = (fk_truncated_costs, fk_truncated_v_remaining)
-            output[string(i)]["oracle"] = (oracle_costs, oracle_v_remaining)
         end
-        
+
+        output[string(i)]["oracle"] = (oracle_costs, oracle_v_remaining)
         output[string(i)]["pso"] = (pso_costs, pso_v_remaining)
         output[string(i)]["evo_30"] = (evo_30_costs, evo_30_v_remaining)
         output[string(i)]["evo_60"] = (evo_60_costs, evo_60_v_remaining)
