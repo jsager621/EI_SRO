@@ -3,7 +3,7 @@
 This repository contains the model code of the Stochastic Resource Optimization (SRO) problem as submitted for publication with Springer Open Energy Informatics under the title: "Combinatorial Chance-constrained Economic Optimization of Distributed Energy Resources".
 
 ## If you want to use SRO yourself
-At the moment, all pure SRO implementations are being moved to their own repository [SRO.jl](https://github.com/jsagerOffis/SRO.jl).
+At the moment, all pure SRO implementations are being moved to their own repository [SRO.jl](https://github.com/jsager621/SRO.jl).
 This library will have cleaner implementations and better documentation for reuse.
 
 ## Running the Simulation
